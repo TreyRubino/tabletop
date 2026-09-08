@@ -1,0 +1,474 @@
+{
+  "note": "Fill in \"url\" for anything you want art for, then run npm run portraits:fetch. Existing urls are preserved when you regenerate. You are choosing the sources, so you are choosing the licence: prefer public domain or CC0.",
+  "entries": [
+    {
+      "id": "npc.harbin",
+      "name": "Harbin Wester",
+      "what": "Person",
+      "hint": "Harbin Wester person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.halia",
+      "name": "Halia Thornton",
+      "what": "Person",
+      "hint": "Halia Thornton person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.toblen",
+      "name": "Toblen Stonehill",
+      "what": "Person",
+      "hint": "Toblen Stonehill person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.linene",
+      "name": "Linene Graywind",
+      "what": "Person",
+      "hint": "Linene Graywind person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.nessa",
+      "name": "Nessa, from the north farms",
+      "what": "Person",
+      "hint": "Nessa, from the north farms person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.dabbledob",
+      "name": "King Dabbledob",
+      "what": "Person",
+      "hint": "King Dabbledob person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.gnerkli",
+      "name": "King Gnerkli",
+      "what": "Person",
+      "hint": "King Gnerkli person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.adabra",
+      "name": "Adabra Gwynn",
+      "what": "Person",
+      "hint": "Adabra Gwynn person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.falcon",
+      "name": "Falcon the Hunter",
+      "what": "Person",
+      "hint": "Falcon the Hunter person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.donjon",
+      "name": "Don-Jon Raskin",
+      "what": "Person",
+      "hint": "Don-Jon Raskin person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.tibor",
+      "name": "Tibor Wester",
+      "what": "Person",
+      "hint": "Tibor Wester person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.narth",
+      "name": "Narth Tezrin",
+      "what": "Person",
+      "hint": "Narth Tezrin person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.anchorite",
+      "name": "The Anchorite of Savras",
+      "what": "Person",
+      "hint": "The Anchorite of Savras person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.cryovain",
+      "name": "Cryovain",
+      "what": "Monster",
+      "hint": "Cryovain monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.mimic",
+      "name": "Mimic",
+      "what": "Monster",
+      "hint": "Mimic monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.orc",
+      "name": "Orc",
+      "what": "Monster",
+      "hint": "Orc monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.yargath",
+      "name": "Yargath, orc chief",
+      "what": "Monster",
+      "hint": "Yargath, orc chief monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.ochre",
+      "name": "Ochre jelly",
+      "what": "Monster",
+      "hint": "Ochre jelly monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.hobgoblin",
+      "name": "Hobgoblin",
+      "what": "Monster",
+      "hint": "Hobgoblin monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.halfogre",
+      "name": "Half-ogre",
+      "what": "Monster",
+      "hint": "Half-ogre monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.ghoul",
+      "name": "Ghoul",
+      "what": "Monster",
+      "hint": "Ghoul monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.skeleton",
+      "name": "Animated armour",
+      "what": "Monster",
+      "hint": "Animated armour monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.spider",
+      "name": "Giant spider",
+      "what": "Monster",
+      "hint": "Giant spider monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.wraith",
+      "name": "Cold shade",
+      "what": "Monster",
+      "hint": "Cold shade monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "ani.manticore",
+      "name": "Manticore",
+      "what": "Animal",
+      "hint": "Manticore animal fantasy art",
+      "url": ""
+    },
+    {
+      "id": "ani.wolves",
+      "name": "Wolf pack",
+      "what": "Animal",
+      "hint": "Wolf pack animal fantasy art",
+      "url": ""
+    },
+    {
+      "id": "ani.boar",
+      "name": "Giant boar",
+      "what": "Animal",
+      "hint": "Giant boar animal fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.ankheg",
+      "name": "Ankheg",
+      "what": "Monster",
+      "hint": "Ankheg monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.merrow",
+      "name": "Merrow",
+      "what": "Monster",
+      "hint": "Merrow monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "obj.mechanism",
+      "name": "The mechanism",
+      "what": "Thing",
+      "hint": "The mechanism thing fantasy art",
+      "url": ""
+    },
+    {
+      "id": "obj.wardstone",
+      "name": "A frost-cracked marker stone",
+      "what": "Thing",
+      "hint": "A frost-cracked marker stone thing fantasy art",
+      "url": ""
+    },
+    {
+      "id": "obj.cart",
+      "name": "An abandoned cart",
+      "what": "Thing",
+      "hint": "An abandoned cart thing fantasy art",
+      "url": ""
+    },
+    {
+      "id": "obj.chest",
+      "name": "A banded strongbox",
+      "what": "Thing",
+      "hint": "A banded strongbox thing fantasy art",
+      "url": ""
+    },
+    {
+      "id": "obj.altar",
+      "name": "The scrying font",
+      "what": "Thing",
+      "hint": "The scrying font thing fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.goblin",
+      "name": "Goblin",
+      "what": "Monster",
+      "hint": "Goblin monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.bugbear",
+      "name": "Bugbear",
+      "what": "Monster",
+      "hint": "Bugbear monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.twigblight",
+      "name": "Twig blight",
+      "what": "Monster",
+      "hint": "Twig blight monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "npc.agatha",
+      "name": "Agatha",
+      "what": "Person",
+      "hint": "Agatha person fantasy art",
+      "url": ""
+    },
+    {
+      "id": "mon.venomfang",
+      "name": "Venomfang",
+      "what": "Monster",
+      "hint": "Venomfang monster fantasy art",
+      "url": ""
+    },
+    {
+      "id": "item.icehewer",
+      "name": "Icehewer",
+      "what": "Rewards",
+      "hint": "Icehewer fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.spellbook",
+      "name": "A water-damaged spellbook",
+      "what": "Rewards",
+      "hint": "A water-damaged spellbook fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.gauntlets",
+      "name": "Gauntlets of ogre power",
+      "what": "Rewards",
+      "hint": "Gauntlets of ogre power fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.cloak",
+      "name": "Cloak of the winter hare",
+      "what": "Rewards",
+      "hint": "Cloak of the winter hare fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.lens",
+      "name": "Gnomish far-lens",
+      "what": "Rewards",
+      "hint": "Gnomish far-lens fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.rope",
+      "name": "A coil of gnomish rope",
+      "what": "Rewards",
+      "hint": "A coil of gnomish rope fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.ring",
+      "name": "A plain silver ring",
+      "what": "Rewards",
+      "hint": "A plain silver ring fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.dragonscale",
+      "name": "A single white scale",
+      "what": "Evidence",
+      "hint": "A single white scale fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.letter",
+      "name": "An unsent letter",
+      "what": "Evidence",
+      "hint": "An unsent letter fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.ledger",
+      "name": "Halia's ledger page",
+      "what": "Evidence",
+      "hint": "Halia's ledger page fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.charm",
+      "name": "Nessa's charm",
+      "what": "Evidence",
+      "hint": "Nessa's charm fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.tools",
+      "name": "Four sets of gnomish tools",
+      "what": "Evidence",
+      "hint": "Four sets of gnomish tools fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.tally",
+      "name": "A tally stick",
+      "what": "Evidence",
+      "hint": "A tally stick fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.antler",
+      "name": "A shed antler, cracked through",
+      "what": "Evidence",
+      "hint": "A shed antler, cracked through fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.effigy",
+      "name": "An orcish effigy",
+      "what": "Evidence",
+      "hint": "An orcish effigy fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.keys",
+      "name": "Axeholm's keyring",
+      "what": "Keys and papers",
+      "hint": "Axeholm's keyring fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.map",
+      "name": "A surveyor's map",
+      "what": "Keys and papers",
+      "hint": "A surveyor's map fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.writ",
+      "name": "Harbin's writ of commission",
+      "what": "Keys and papers",
+      "hint": "Harbin's writ of commission fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.deed",
+      "name": "A deed to an empty house",
+      "what": "Keys and papers",
+      "hint": "A deed to an empty house fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.prophecy",
+      "name": "What the font said",
+      "what": "Keys and papers",
+      "hint": "What the font said fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.potions",
+      "name": "Two potions of healing",
+      "what": "Consumables",
+      "hint": "Two potions of healing fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.firewine",
+      "name": "A skin of Phandalin firewine",
+      "what": "Consumables",
+      "hint": "A skin of Phandalin firewine fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.pitch",
+      "name": "Three jars of gnomish pitch",
+      "what": "Consumables",
+      "hint": "Three jars of gnomish pitch fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.rations",
+      "name": "Cold-weather rations",
+      "what": "Consumables",
+      "hint": "Cold-weather rations fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.whistle",
+      "name": "A whistle that makes no sound",
+      "what": "Curiosities",
+      "hint": "A whistle that makes no sound fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.cup",
+      "name": "A cup from the Manse table",
+      "what": "Curiosities",
+      "hint": "A cup from the Manse table fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.brooch",
+      "name": "A tarnished brooch",
+      "what": "Curiosities",
+      "hint": "A tarnished brooch fantasy item art",
+      "url": ""
+    },
+    {
+      "id": "item.slate",
+      "name": "A child's slate",
+      "what": "Curiosities",
+      "hint": "A child's slate fantasy item art",
+      "url": ""
+    }
+  ]
+}

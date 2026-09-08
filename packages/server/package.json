@@ -1,0 +1,18 @@
+{
+  "name": "@tabletop/server",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "tsc -p . && node --disable-warning=ExperimentalWarning dist/index.js",
+    "start": "node --disable-warning=ExperimentalWarning dist/index.js"
+  },
+  "dependencies": {
+    "@tabletop/core": "*",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/ws": "^8.5.13"
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 4,
+  "id": "example",
+  "title": "The Kestrel Job",
+  "difficultyLabel": "Target",
+  "rootScene": "city",
+  "audiences": [
+    { "id": "driver", "name": "The Driver", "actor": "crew.driver" },
+    { "id": "fixer", "name": "The Fixer", "actor": "crew.fixer" }
+  ],
+  "tokenKinds": [
+    {
+      "id": "crew", "label": "Crew", "shape": "shield", "accent": "#5fb0d4", "party": true,
+      "entries": [
+        { "id": "look", "label": "What people notice", "group": "identity" },
+        { "id": "bio", "label": "Who they are", "group": "identity" },
+        { "id": "note", "label": "GM note", "group": "dm" }
+      ]
+    },
+    {
+      "id": "heat", "label": "Opposition", "shape": "hex", "accent": "#cf6f63",
+      "entries": [
+        { "id": "look", "label": "First impression", "group": "identity" },
+        { "id": "read", "label": "What a crew might know", "group": "lore" }
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "id": "crew.driver", "kind": "crew", "name": "Marchetti", "group": "The crew", "hp": 8,
+      "entries": {
+        "look": "Never leaves the car running. Says it is a tell.",
+        "bio": "Drove ambulances for eleven years before somebody offered better money."
+      }
+    },
+    {
+      "id": "crew.fixer", "kind": "crew", "name": "Odile", "group": "The crew", "hp": 8,
+      "entries": {
+        "look": "Knows the name of everyone on the door.",
+        "bio": "Has never personally stolen anything and has arranged a great deal of theft."
+      }
+    },
+    {
+      "id": "heat.nightman", "kind": "heat", "name": "The night manager", "group": "The bank", "hp": 6,
+      "entries": {
+        "look": "Forty, tired, and counting the minutes until six.",
+        "read": "Craft Target 11: he has been skimming, and he is more frightened of the audit than of you."
+      },
+      "narration": ["He puts both hands flat on the desk, very slowly, without being asked."],
+      "stats": {
+        "summary": "Ordinary person, out of his depth",
+        "bar": [["Guard", "8"], ["Stress", "6"], ["Move", "Normal"]],
+        "abilities": [["NERVE", "1"], ["CRAFT", "3"], ["COOL", "0"], ["EDGE", "2"]],
+        "meta": [["Carries", "keys, a pager, a ledger he should have burned"], ["Threat", "Low"]],
+        "sections": [
+          { "label": "Actions", "rows": [["Pull the alarm", "One round to reach it. He will not, if anyone is kind to him."]] },
+          { "label": "Running him", "rows": [["The out", "He wants to be talked into it. Let the Fixer find that in one question."]] }
+        ]
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "item.ledger", "name": "The night manager's ledger", "group": "Evidence",
+      "text": "Green cloth cover, two years of entries.",
+      "detail": "Every skimmed figure, in his own hand.",
+      "secret": "Worth more than the vault. Give it to one player and nobody else."
+    }
+  ],
+  "scenes": [
+    {
+      "id": "city", "name": "The city, after midnight",
+      "reveal": ["presence", "description"],
+      "entry": { "x": 0.5, "y": 0.85 },
+      "description": "Wet streets, one bank, and four hours until the shift changes.",
+      "entries": [
+        { "id": "read.city", "style": "read", "label": "Opening", "reveal": true,
+          "text": "The rain stopped an hour ago and nobody has noticed yet. The Kestrel Building has one light on, on the third floor, and it has been on all week." }
+      ],
+      "options": ["Drive past once more", "Send the Fixer to the door"],
+      "checks": [
+        { "skill": "Cool", "dc": 12, "when": "Reading the street",
+          "success": "One unmarked car, occupied, two blocks down. It has been there both nights.",
+          "failure": "Rain, and a city." }
+      ],
+      "cues": [{ "when": "Anyone checks the time", "text": "Say the number out loud. Always." }],
+      "tokens": [
+        { "actor": "crew.driver", "x": 0.46, "y": 0.82, "reveal": ["presence", "identity", "health"] },
+        { "actor": "crew.fixer", "x": 0.54, "y": 0.82, "reveal": ["presence", "identity", "health"] }
+      ],
+      "prep": { "want": "Inside.", "threat": "The car two blocks down.", "wrong": "The third-floor light never goes off." }
+    },
+    {
+      "id": "lobby", "name": "The Kestrel Building, lobby",
+      "pin": { "parent": "city", "x": 0.62, "y": 0.44 },
+      "reveal": [],
+      "entry": { "x": 0.5, "y": 0.9 },
+      "description": "Marble, one desk, and a man behind it who is not supposed to be alone.",
+      "entries": [
+        { "id": "read.lobby", "style": "read", "label": "Through the doors",
+          "text": "He looks up before the door has finished opening, which means he was already listening for it." }
+      ],
+      "links": [{ "scene": "city", "x": 0.5, "y": 0.93 }],
+      "options": ["Talk to him", "Go around him"],
+      "checks": [
+        { "skill": "Craft", "dc": 11, "when": "On the night manager",
+          "success": "He has been skimming. He is more frightened of the audit than of you.",
+          "failure": "A tired man doing a job.",
+          "reveals": ["item.ledger#presence"] }
+      ],
+      "cues": [{ "when": "If anyone is kind to him", "text": "He folds immediately, and helps." }],
+      "tokens": [{ "actor": "heat.nightman", "x": 0.5, "y": 0.4 }],
+      "prep": { "want": "Past the desk.", "threat": "One alarm, one round away.", "wrong": "He is alone, and he should not be." }
+    }
+  ],
+  "quests": [
+    {
+      "id": "quest.job", "title": "The Kestrel job", "giver": "Odile", "start": "cased",
+      "reveal": ["presence", "stage"],
+      "stages": [
+        { "id": "cased", "playerText": "Four hours. One building.",
+          "dmText": "The unmarked car is the real clock.",
+          "options": [{ "label": "They go in", "goto": "inside" }] },
+        { "id": "inside", "playerText": "You are in the lobby.",
+          "dmText": "The night manager is the whole scene. He wants to be talked into it.",
+          "options": [] }
+      ]
+    }
+  ],
+  "clocks": [
+    {
+      "id": "clock.shift", "name": "Until the shift changes", "max": 4,
+      "caption": "Four hours, and it does not stop for conversation.",
+      "events": [
+        { "at": 1, "playerText": "A patrol car turns onto the street.", "dmText": "Routine. Let them assume otherwise." },
+        { "at": 2, "playerText": "The third-floor light goes out.", "dmText": "Somebody up there has finished." },
+        { "at": 4, "playerText": "Headlights, and the day staff arriving.", "dmText": "Out of time. Whatever is unfinished stays unfinished." }
+      ]
+    }
+  ]
+}

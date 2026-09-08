@@ -1,0 +1,1015 @@
+/* ------------------------------------------------------------------
+   The chrome is a frame around whatever art a DM brings, so it stays
+   quiet: elevation carries structure rather than outlines, and there is
+   one accent used only for state.
+
+   Amber means exactly one thing wherever it appears \u2014 the players
+   cannot see this \u2014 which is why it never appears on a player screen.
+
+   System font stacks throughout: the table may have no network, and a
+   webfont that fails to load mid-session is a defect.
+------------------------------------------------------------------ */
+
+:root {
+  --bg: #0b0e12;
+  --s1: #12161c;
+  --s2: #171d24;
+  --s3: #1e262f;
+  --s4: #26303b;
+  --line: rgb(255 255 255 / 0.07);
+  --line-2: rgb(255 255 255 / 0.13);
+
+  --ink: #e6ecf1;
+  --ink-2: #9aabb8;
+  --ink-3: #677885;
+
+  --accent: #5fb0d4;
+  --accent-hi: #74bfe0;
+  --accent-soft: rgb(95 176 212 / 0.14);
+  --on-accent: #08111a;
+
+  /* One meaning wherever it appears: the players cannot see this. */
+  --hidden: #d3a24a;
+  --hidden-soft: rgb(211 162 74 / 0.13);
+  --bad: #cf6f63;
+
+  --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+
+  --rail: 56px;
+  --drawer: 356px;
+  --insp: 336px;
+  --r: 6px;
+  --r-sm: 4px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+
+body {
+  background: var(--bg);
+  position: fixed;
+  inset: 0;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.012em; }
+h1 { font-size: 1rem; }
+h2 { font-size: 1.02rem; }
+h3 {
+  font-size: 0.66rem; color: var(--ink-3); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+h4 { font-size: 0.86rem; }
+p { margin: 0 0 0.55rem; }
+
+.prose { font-family: var(--serif); line-height: 1.62; max-width: 62ch; }
+.hint, .empty { color: var(--ink-3); font-size: 0.8rem; line-height: 1.5; }
+
+.truth {
+  font-size: 0.81rem; line-height: 1.55; color: var(--ink-2);
+  border-left: 2px solid var(--hidden); padding-left: 0.6rem; margin: 0.4rem 0 0.5rem;
+}
+.next { font-size: 0.75rem; color: var(--hidden); opacity: 0.85; margin: 0; }
+
+button {
+  font: inherit; font-size: 0.79rem; color: var(--ink);
+  background: var(--s3); border: 1px solid transparent;
+  border-radius: var(--r-sm); padding: 0.32rem 0.6rem; cursor: pointer;
+  transition: background 90ms linear, color 90ms linear;
+}
+button:hover:not(:disabled) { background: var(--s4); }
+button:disabled { opacity: 0.32; cursor: default; }
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+button.ghost { background: transparent; color: var(--ink-2); }
+button.ghost:hover:not(:disabled) { background: var(--s2); color: var(--ink); }
+button.danger:hover:not(:disabled) { color: var(--bad); }
+
+input[type="text"], textarea, select, .search {
+  font: inherit; font-size: 0.82rem; background: var(--s2);
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  color: var(--ink); padding: 0.4rem 0.55rem; width: 100%;
+}
+textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
+::placeholder { color: var(--ink-3); }
+
+.row { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+.stepper { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--ink-2); }
+.stepper span { min-width: 3.2rem; text-align: center; }
+
+.chip {
+  font-size: 0.72rem; padding: 0.22rem 0.55rem; border-radius: 999px;
+  background: var(--s2); color: var(--ink-2);
+}
+.chip:hover:not(:disabled) { background: var(--s4); color: var(--ink); }
+.chip.is-on { background: var(--accent); color: var(--on-accent); }
+.chip.is-locked {
+  background: var(--hidden-soft); color: var(--hidden); cursor: default;
+}
+
+/* ---------------------------- stage ---------------------------- */
+
+.stage-clip { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #06080b; }
+.stage { position: absolute; inset: 0; transform-origin: center; touch-action: none; }
+.world { position: absolute; }
+.stage, .stage * {
+  user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.stage img { -webkit-user-drag: none; }
+.stage-bg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  user-select: none; pointer-events: none;
+}
+.stage-empty { flex: 1; display: grid; place-items: center; color: var(--ink-3); }
+
+/* Squares stay square: the cell is sized in pixels, not percentages,
+   because the point of the grid is that a player can count it. */
+.grid-overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.075) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.075) 1px, transparent 1px);
+}
+
+.scale-bar {
+  position: absolute; left: 0.75rem; bottom: 0.75rem;
+  display: flex; align-items: center; gap: 0.45rem;
+  background: rgb(6 8 11 / 0.72); backdrop-filter: blur(6px);
+  border-radius: var(--r-sm); padding: 0.28rem 0.5rem;
+  font-size: 0.68rem; color: var(--ink-2); pointer-events: none;
+}
+.scale-bar span {
+  display: block; height: 5px; border-left: 1px solid var(--ink-2);
+  border-right: 1px solid var(--ink-2); border-bottom: 1px solid var(--ink-2);
+}
+.scale-bar em { font-style: normal; }
+.scale-bar small { color: var(--ink-3); }
+
+.tok {
+  /* Zero-size anchor at the exact world coordinate. */
+  position: absolute; width: 0; height: 0;
+  user-select: none;
+}
+.tok.is-draggable { cursor: grab; }
+.tok.is-draggable:active { cursor: grabbing; }
+
+.tok-ring {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  width: 46px; aspect-ratio: 1; padding: 2px; background: var(--tok);
+  display: grid; place-items: center;
+  filter: drop-shadow(0 3px 10px rgb(0 0 0 / 0.6));
+}
+.tok-fill {
+  width: 100%; height: 100%; background: var(--s3);
+  display: grid; place-items: center; overflow: hidden;
+}
+.tok-fill img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.tok-initials { font-size: 0.8rem; font-weight: 600; color: var(--tok); }
+
+.tok.is-anon .tok-fill { background: var(--s2); }
+.tok.is-anon .tok-ring { opacity: 0.8; }
+.tok.is-selected .tok-ring {
+  background: var(--accent);
+  filter: drop-shadow(0 3px 10px rgb(0 0 0 / 0.6))
+          drop-shadow(0 0 10px rgb(95 176 212 / 0.55));
+}
+
+.tok-name {
+  position: absolute; left: 0; top: 31px; transform: translateX(-50%);
+  font-size: 0.68rem; background: rgb(6 8 11 / 0.82);
+  padding: 0.05rem 0.35rem; border-radius: 3px; white-space: nowrap;
+}
+.tok-hp {
+  position: absolute; left: -23px; top: 25px;
+  width: 46px; height: 3px; background: rgb(6 8 11 / 0.88);
+  border-radius: 2px; overflow: hidden;
+}
+.tok-hp span { display: block; height: 100%; background: var(--accent); }
+
+/* Amber hatching means: the players cannot see this. It goes on the
+   visible parts, because the anchor itself has no size to paint. */
+.tok.is-hidden .tok-ring, .roster-item.is-hidden, .scene-row .is-hidden {
+  background-image: repeating-linear-gradient(
+    45deg, transparent, transparent 5px,
+    rgb(211 162 74 / 0.28) 5px, rgb(211 162 74 / 0.28) 10px);
+}
+.pin.is-hidden .pin-label {
+  background-image: repeating-linear-gradient(
+    45deg, transparent, transparent 5px,
+    rgb(211 162 74 / 0.28) 5px, rgb(211 162 74 / 0.28) 10px);
+}
+
+.pin {
+  /* Zero-size anchor: the dot sits on the coordinate, the label hangs
+     to the right, and the label's length cannot move the dot. */
+  position: absolute; width: 0; height: 0;
+  background: none; border: 0; padding: 0; overflow: visible;
+  color: var(--ink); font-size: 0.72rem; cursor: pointer;
+}
+.pin:disabled { cursor: default; }
+.pin-dot {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px rgb(6 8 11 / 0.85), 0 2px 8px rgb(0 0 0 / 0.5);
+}
+.pin-label {
+  position: absolute; left: 9px; top: 0; transform: translateY(-50%);
+  white-space: nowrap;
+  background: rgb(6 8 11 / 0.78); backdrop-filter: blur(5px);
+  border-radius: 999px; padding: 0.2rem 0.55rem;
+  line-height: 1.2;
+}
+.pin:not(:disabled):hover .pin-label { background: var(--accent); color: var(--on-accent); }
+.pin:not(:disabled):hover .pin-dot { background: var(--accent-hi); }
+.pin:focus-visible { outline: none; }
+.pin:focus-visible .pin-label { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.is-arming .stage, .is-arming .tok, .is-arming .pin { cursor: crosshair; }
+.is-arming .tok { pointer-events: none; }
+
+/* ---------------------------- shell ---------------------------- */
+
+.shell {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: var(--rail) minmax(0, 1fr) var(--insp);
+  height: 100%; position: relative; background: var(--bg);
+}
+
+.rail {
+  background: var(--s1); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; padding: 0.6rem 0; z-index: 3;
+}
+.rail-mark {
+  width: 30px; height: 30px; display: grid; place-items: center;
+  background: var(--s3); border-radius: 8px;
+  color: var(--ink-2); font-weight: 700; font-size: 0.85rem; margin-bottom: 0.6rem;
+}
+.rail-btn {
+  position: relative;
+  width: 38px; height: 38px; display: grid; place-items: center;
+  background: transparent; border-radius: 8px; color: var(--ink-3);
+}
+.rail-btn:hover:not(:disabled) { color: var(--ink); background: var(--s2); }
+.rail-btn.is-open { color: var(--accent); background: var(--accent-soft); }
+.rail-btn.is-open::before {
+  content: ''; position: absolute; left: -0.6rem; top: 9px; bottom: 9px;
+  width: 2px; border-radius: 0 2px 2px 0; background: var(--accent);
+}
+.rail-btn.is-alert { color: var(--hidden); }
+.rail-spacer { flex: 1; }
+
+/* Overlays the canvas rather than pushing it: pushing would reflow the
+   map under the cursor every time a panel opens. Clicking the map
+   closes it, because reaching for the map is a request for room. */
+.drawer {
+  position: absolute; top: 0; bottom: 0; left: var(--rail); width: var(--drawer);
+  background: var(--s1); border-right: 1px solid var(--line-2);
+  display: flex; flex-direction: column; z-index: 2;
+  box-shadow: 14px 0 40px rgb(0 0 0 / 0.45);
+  animation: drawer-in 150ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes drawer-in {
+  from { transform: translateX(-14px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.drawer-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.85rem 0.95rem 0.6rem;
+}
+.drawer-body {
+  flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain; padding: 0 0.95rem 1.2rem;
+}
+.drawer-body .prose { max-width: 100%; overflow-wrap: break-word; }
+
+.canvas { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.canvas-stage { position: relative; flex: 1; min-height: 0; display: flex; }
+
+.canvas-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.5rem 0.9rem; background: var(--s1);
+  border-bottom: 1px solid var(--line);
+}
+.trail { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; min-height: 1.7rem; }
+.crumb {
+  background: transparent; padding: 0.14rem 0.35rem; border-radius: var(--r-sm);
+  color: var(--ink-3); font-size: 0.82rem;
+}
+.crumb:disabled { color: var(--ink); opacity: 1; font-weight: 600; }
+.crumb:not(:disabled):hover { color: var(--ink); background: var(--s3); }
+.crumb-sep { color: var(--ink-3); font-size: 0.72rem; }
+
+.tools { display: flex; gap: 0.3rem; align-items: center; }
+.tool {
+  display: flex; align-items: center; gap: 0.35rem;
+  font-size: 0.76rem; background: transparent; color: var(--ink-2);
+  padding: 0.3rem 0.55rem;
+}
+.tool:hover:not(:disabled) { background: var(--s3); color: var(--ink); }
+.tool.is-on { background: var(--accent-soft); color: var(--accent); }
+.tool.is-on:disabled { opacity: 1; }
+/* Both top-bar actions read identically: quiet with a hover highlight
+   while there is something to do, and lit but inert once it is done. */
+.tool.is-alert { background: var(--hidden-soft); color: var(--hidden); }
+
+.inspector {
+  background: var(--s1); border-left: 1px solid var(--line);
+  min-height: 0; overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain; padding: 0.9rem;
+}
+.inspector .prose { max-width: 100%; overflow-wrap: break-word; }
+.insp { min-width: 0; }
+.insp { display: flex; flex-direction: column; gap: 0.55rem; }
+.insp-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+.insp-kind { color: var(--ink-3); font-size: 0.74rem; margin: 0; }
+.insp-groups { display: flex; flex-wrap: wrap; gap: 0.28rem; margin: 0.1rem 0 0.3rem; }
+
+.hp { display: flex; align-items: center; gap: 0.6rem; }
+.hp-bar { flex: 1; height: 6px; background: var(--s3); border-radius: 3px; overflow: hidden; }
+.hp-bar span { display: block; height: 100%; background: var(--accent); }
+.hp-count { font-size: 0.78rem; color: var(--ink-2); }
+.hp-controls { display: flex; align-items: center; gap: 0.2rem; font-size: 0.77rem; color: var(--ink-2); }
+.hp-controls span { min-width: 3.4rem; text-align: center; }
+.hp-controls button { padding: 0.18rem 0.36rem; }
+
+/* ---------------------------- content blocks ---------------------------- */
+
+.read {
+  margin: 0.1rem 0 0.4rem; padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.read p { font-family: var(--serif); line-height: 1.66; margin: 0; font-size: 0.94rem; }
+.read cite {
+  display: block; font-style: normal; font-size: 0.68rem;
+  color: var(--accent); margin-bottom: 0.3rem;
+}
+
+.entries { display: flex; flex-direction: column; gap: 0.55rem; }
+.entry { margin: 0; }
+.entry img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  border-radius: var(--r); background: var(--s2); display: block; margin-bottom: 0.3rem;
+}
+.entry figcaption { font-size: 0.7rem; color: var(--ink-3); margin-bottom: 0.15rem; }
+.entry .prose { font-size: 0.87rem; }
+.entries.is-secret { border-top: 1px solid var(--line); padding-top: 0.6rem; }
+.entry.is-secret figcaption { color: var(--hidden); }
+.entry.is-secret .prose { color: var(--ink-2); }
+
+.affordances { background: var(--s2); border-radius: var(--r); padding: 0.6rem 0.75rem; }
+.affordances h3 { margin-bottom: 0.3rem; }
+.affordances ul { margin: 0; padding-left: 1.05rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.affordances li { font-size: 0.84rem; line-height: 1.5; color: var(--ink); }
+
+.checks { display: flex; flex-direction: column; gap: 0.45rem; }
+.check { background: var(--s2); border-radius: var(--r); padding: 0.6rem 0.7rem; }
+.check header { display: flex; flex-direction: column; gap: 0.1rem; margin-bottom: 0.35rem; }
+.check-skill { font-size: 0.82rem; font-weight: 600; }
+.check-skill em { font-style: normal; color: var(--accent); margin-left: 0.35rem; }
+.check-when { font-size: 0.7rem; color: var(--ink-3); }
+.check-out { font-size: 0.8rem; line-height: 1.5; margin: 0 0 0.25rem; padding-left: 0.6rem; }
+.check-out.is-pass { border-left: 2px solid var(--accent); color: var(--ink); }
+.check-out.is-fail { border-left: 2px solid var(--line-2); color: var(--ink-3); }
+.check-grant { display: flex; align-items: center; gap: 0.28rem; flex-wrap: wrap; margin-top: 0.35rem; }
+.check-grant > span { font-size: 0.7rem; color: var(--ink-3); }
+
+.cues { display: flex; flex-direction: column; gap: 0.5rem; }
+.cues h3 { color: var(--hidden); }
+.cue { border-left: 2px solid var(--hidden-soft); padding-left: 0.6rem; }
+.cue-when { display: block; font-size: 0.68rem; color: var(--hidden); margin-bottom: 0.1rem; }
+.cue p { margin: 0; font-size: 0.81rem; line-height: 1.5; color: var(--ink-2); }
+
+.narration {
+  background: var(--hidden-soft); border-radius: var(--r); padding: 0.6rem 0.75rem;
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+.narration h3 { color: var(--hidden); }
+.narration .prose { font-size: 0.89rem; margin: 0; }
+.narration button { align-self: flex-start; font-size: 0.71rem; }
+
+.prep { margin: 0.2rem 0 0; display: flex; flex-direction: column; gap: 0.45rem; }
+.prep dt { color: var(--ink-3); font-size: 0.73rem; }
+.prep dd { margin: 0.08rem 0 0; font-family: var(--serif); line-height: 1.5; }
+.prep dd.is-blank { color: var(--hidden); font-style: italic; opacity: 0.7; }
+
+/* ---------------------------- panels ---------------------------- */
+
+.search { margin-bottom: 0.6rem; }
+
+.scene-row { display: flex; gap: 0.25rem; align-items: stretch; margin-bottom: 1px; }
+.scene-open {
+  flex: 1; text-align: left; background: transparent; border-radius: var(--r-sm);
+  padding: 0.42rem 0.5rem; display: flex; flex-direction: column; gap: 0.1rem;
+}
+.scene-open:hover { background: var(--s2); }
+.scene-row.is-active .scene-open { background: var(--accent-soft); }
+.scene-row.is-active .scene-name { color: var(--accent); }
+.scene-name { font-size: 0.85rem; }
+.scene-meta { display: flex; gap: 0.45rem; font-size: 0.68rem; color: var(--ink-3); }
+.scene-meta em { font-style: normal; }
+.scene-meta .live { color: var(--accent); }
+.scene-push { font-size: 0.7rem; }
+
+.roster { display: flex; flex-direction: column; gap: 0.55rem; }
+.roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.35rem; }
+.roster-item {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+  padding: 0.55rem 0.3rem; background: var(--s2); border-radius: var(--r); text-align: center;
+}
+.roster-item:hover { background: var(--s3); }
+.roster-item.is-armed { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.roster-chip { width: 32px; aspect-ratio: 1; padding: 2px; background: var(--tok); display: grid; place-items: center; }
+.roster-chip.tok-disc { clip-path: circle(50% at 50% 50%); }
+.roster-chip.tok-hex { clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%); }
+.roster-chip.tok-square { clip-path: inset(0 round 14%); }
+.roster-chip.tok-diamond { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+.roster-chip.tok-shield { clip-path: polygon(50% 0%, 100% 14%, 100% 62%, 50% 100%, 0% 62%, 0% 14%); }
+.roster-fill { width: 100%; height: 100%; background: var(--s3); display: grid; place-items: center; overflow: hidden; }
+.roster-fill img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.roster-fill em { font-style: normal; font-size: 0.66rem; font-weight: 700; color: var(--tok); }
+.roster-name { font-size: 0.68rem; line-height: 1.25; color: var(--ink-2); }
+.roster-count {
+  position: absolute; top: 4px; right: 5px; font-size: 0.6rem; font-weight: 700;
+  color: var(--on-accent); background: var(--accent);
+  min-width: 15px; height: 15px; border-radius: 8px; display: grid; place-items: center;
+}
+.arm-note {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  font-size: 0.78rem; color: var(--accent); background: var(--accent-soft);
+  border-radius: var(--r); padding: 0.45rem 0.5rem 0.45rem 0.65rem;
+}
+.arm-bar {
+  position: absolute; left: 50%; bottom: 1.1rem; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 0.6rem;
+  background: var(--s3); border-radius: 999px; padding: 0.42rem 0.5rem 0.42rem 0.85rem;
+  font-size: 0.8rem; box-shadow: 0 8px 30px rgb(0 0 0 / 0.55); z-index: 4;
+}
+.arm-swatch { width: 9px; height: 9px; border-radius: 50%; background: var(--tok); }
+
+.matrix-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.2rem 0 0.45rem; color: var(--ink-2); font-size: 0.8rem;
+}
+.matrix-cols { display: flex; gap: 3px; }
+.matrix-col { width: 24px; padding: 0.1rem 0; font-size: 0.62rem; background: transparent; color: var(--ink-3); }
+.matrix-col:hover { color: var(--accent); background: var(--s2); }
+.matrix-bulk { display: flex; gap: 0.3rem; padding-bottom: 0.55rem; }
+.matrix-bulk button { font-size: 0.72rem; }
+.matrix-row { padding: 0.5rem 0; border-top: 1px solid var(--line); }
+.matrix-label {
+  display: flex; flex-direction: column; align-items: flex-start;
+  margin-bottom: 0.28rem; background: transparent; padding: 0; width: 100%;
+}
+.matrix-label:hover .matrix-title { color: var(--accent); }
+.matrix-title { font-size: 0.79rem; line-height: 1.35; text-align: left; }
+.matrix-detail { font-size: 0.65rem; color: var(--ink-3); }
+.matrix-group { display: flex; align-items: center; justify-content: space-between; padding: 1px 0; }
+.matrix-group-name { font-size: 0.68rem; color: var(--ink-3); }
+.cell { width: 24px; height: 16px; padding: 0; border-radius: 3px; background: var(--s3); }
+.cell:hover { background: var(--s4); }
+.cell.is-on { background: var(--accent); }
+
+.quest, .clock { padding: 0.65rem 0; border-top: 1px solid var(--line); }
+.quest:first-child, .clock:first-child { border-top: 0; }
+.quest header, .clock header {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.3rem;
+}
+.quest.is-hidden { opacity: 0.55; }
+.clock-caption { font-size: 0.74rem; color: var(--ink-3); margin: 0.1rem 0 0.4rem; }
+.track { display: flex; gap: 3px; margin: 0.4rem 0 0.5rem; }
+.track span { flex: 1; height: 8px; background: var(--s3); border-radius: 2px; }
+.track span.is-filled { background: var(--accent); }
+
+.branches { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.45rem; }
+.branch-label { width: 100%; font-size: 0.68rem; color: var(--ink-3); }
+.branch { font-size: 0.76rem; text-align: left; background: var(--accent-soft); color: var(--accent); }
+.branch:hover:not(:disabled) { background: var(--accent); color: var(--on-accent); }
+
+.stage-map { margin-top: 0.5rem; }
+.stage-map summary { font-size: 0.7rem; color: var(--ink-3); cursor: pointer; }
+.stage-jump {
+  display: flex; gap: 0.5rem; width: 100%; text-align: left;
+  background: transparent; padding: 0.3rem 0.4rem; margin-top: 2px; border-radius: var(--r-sm);
+}
+.stage-jump:hover { background: var(--s2); }
+.stage-jump.is-here { background: var(--s3); }
+.stage-id { font-size: 0.65rem; color: var(--ink-3); min-width: 5rem; }
+.stage-text { font-size: 0.74rem; color: var(--ink-2); line-height: 1.4; }
+.stage-jump.is-here .stage-text { color: var(--ink); }
+
+.items { display: flex; flex-direction: column; gap: 0.7rem; }
+.item {
+  display: flex; gap: 0.6rem; background: var(--s2);
+  border-radius: var(--r); padding: 0.6rem 0.7rem; margin-bottom: 0.35rem;
+}
+.item.is-hidden { background: var(--s1); }
+.item img { width: 52px; height: 52px; object-fit: cover; border-radius: var(--r-sm); flex: none; }
+.item h4 { margin-bottom: 0.15rem; }
+.item .prose { font-size: 0.83rem; }
+.item-detail { color: var(--ink-2); }
+.give { display: flex; gap: 0.25rem; flex-wrap: wrap; margin-top: 0.35rem; }
+.whisper {
+  margin: 0; padding: 0.7rem 0.85rem; background: var(--accent-soft);
+  border-left: 3px solid var(--accent); border-radius: 0 var(--r) var(--r) 0;
+}
+.whisper p { font-family: var(--serif); font-size: 0.94rem; line-height: 1.6; margin: 0; }
+
+
+/* ---------------------------- overlays ---------------------------- */
+
+.banner {
+  position: fixed; inset: 0; z-index: 20;
+  background: rgb(6 8 11 / 0.96); display: grid; place-items: center; padding: 3rem;
+}
+.banner p {
+  font-family: var(--serif); font-size: clamp(1.8rem, 4.4vw, 3.6rem);
+  line-height: 1.32; text-align: center; max-width: 20ch; margin: 0;
+}
+
+.toasts {
+  display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-end;
+  width: 100%;
+}
+.toast {
+  background: var(--s3); border-left: 3px solid var(--accent);
+  border-radius: var(--r-sm); padding: 0.5rem 0.75rem;
+  font-size: 0.8rem; max-width: 22rem; box-shadow: 0 8px 26px rgb(0 0 0 / 0.5);
+}
+
+kbd {
+  font: inherit; font-size: 0.71rem; background: var(--s4);
+  border-radius: 4px; padding: 0.12rem 0.4rem; color: var(--ink);
+}
+
+.join, .notice {
+  height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0.85rem; padding: 2rem; text-align: center;
+}
+.join label { display: flex; flex-direction: column; gap: 0.3rem; width: 15rem; text-align: left; font-size: 0.78rem; color: var(--ink-3); }
+.join-players { display: flex; gap: 0.45rem; flex-wrap: wrap; justify-content: center; }
+.join-player {
+  color: var(--ink); text-decoration: none; background: var(--s3);
+  border-radius: var(--r); padding: 0.55rem 1rem;
+}
+.join-player:hover { background: var(--accent); color: var(--on-accent); }
+.join-alt { color: var(--ink-3); font-size: 0.78rem; margin-top: 0.5rem; }
+.notice.is-quiet h1 { color: var(--ink-2); }
+.notice p { color: var(--ink-3); }
+
+/* A shared display is usually further from the reader than a laptop. */
+
+@media (max-width: 1060px) {
+  .shell { grid-template-columns: var(--rail) minmax(0, 1fr); }
+  .inspector { display: none; }
+  .drawer { width: calc(100vw - var(--rail)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+
+/* ==================================================================
+   v1: notes, and a few surface refinements.
+================================================================== */
+
+button.primary {
+  background: var(--accent); color: var(--on-accent); font-weight: 600;
+}
+button.primary:hover:not(:disabled) { background: var(--accent-hi); }
+
+/* ---------------------------- notes ---------------------------- */
+
+.notes, .note-compose { display: flex; flex-direction: column; gap: 0.55rem; }
+.note-to { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+
+.note {
+  background: var(--s2); border-radius: var(--r); padding: 0.7rem 0.8rem;
+  border-left: 3px solid var(--line-2);
+}
+.note.is-private { border-left-color: var(--accent); }
+.note.is-shared { border-left-color: var(--hidden); }
+.note.is-relayed { border-left-color: var(--line-2); background: var(--s1); }
+.note .prose { font-size: 0.95rem; margin: 0; }
+.note p { margin: 0 0 0.4rem; font-size: 0.85rem; line-height: 1.5; color: var(--ink-2); }
+.note header { display: flex; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.3rem; }
+.note footer { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.55rem; }
+.note-who { font-size: 0.74rem; color: var(--accent); font-weight: 600; }
+.note-state { font-size: 0.7rem; color: var(--ink-3); }
+.note-share { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.note-share:hover { background: var(--accent-hi); }
+
+/* The recipient decides what happens next, so the prompt shows both
+   choices rather than only announcing that something arrived. */
+.toast.is-note { border-left: 3px solid var(--accent); max-width: none; width: 100%; }
+.toast-eyebrow {
+  display: block; font-size: 0.68rem; color: var(--accent);
+  font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+.toast.is-note p { margin: 0 0 0.6rem; font-size: 0.86rem; line-height: 1.5; }
+.toast.is-note .row { gap: 0.4rem; }
+
+
+
+/* ---------------------------- stat blocks ---------------------------- */
+
+.statblock {
+  background: var(--s2); border-radius: var(--r);
+  border-top: 2px solid var(--hidden);
+  padding: 0.7rem 0.8rem; display: flex; flex-direction: column; gap: 0.5rem;
+}
+.sb-summary { font-style: italic; color: var(--ink-2); font-size: 0.78rem; margin: 0; }
+
+.sb-bar { display: flex; flex-wrap: wrap; gap: 0.9rem; }
+.sb-bar div { display: flex; gap: 0.3rem; align-items: baseline; }
+.sb-bar dt { font-size: 0.68rem; color: var(--ink-3); margin: 0; }
+.sb-bar dd { margin: 0; font-size: 0.86rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.sb-abilities {
+  /* However many attributes the system has. Six is D&D's number, not
+     the engine's. */
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(2.4rem, 1fr));
+  gap: 0.2rem;
+  background: var(--s1); border-radius: var(--r-sm); padding: 0.4rem 0.3rem;
+}
+.sb-abilities div { text-align: center; }
+.sb-abilities dt { font-size: 0.62rem; color: var(--ink-3); margin: 0 0 0.1rem; }
+.sb-abilities dd { margin: 0; font-size: 0.72rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.sb-meta { margin: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.sb-meta div { display: grid; grid-template-columns: 5.2rem 1fr; gap: 0.5rem; }
+.sb-meta dt { font-size: 0.68rem; color: var(--ink-3); margin: 0; }
+.sb-meta dd { margin: 0; font-size: 0.76rem; line-height: 1.45; }
+
+.sb-section { border-top: 1px solid var(--line); padding-top: 0.45rem; }
+.sb-section h4 {
+  font-size: 0.7rem; color: var(--hidden); margin-bottom: 0.3rem;
+  letter-spacing: 0.02em;
+}
+.sb-section p { font-size: 0.78rem; line-height: 1.5; margin: 0 0 0.35rem; color: var(--ink-2); }
+.sb-section p:last-child { margin-bottom: 0; }
+.sb-section strong { color: var(--ink); font-weight: 600; }
+
+
+/* ---------------------------- notifications ----------------------------
+   Tucked into the corner where the top bar meets the inspector, over the
+   map rather than beside it: status the DM can see without looking away
+   from what the table is looking at.
+------------------------------------------------------------------ */
+
+
+/* Everything that arrives, arrives here: the status icons, the note a
+   player must decide about, and the DM's confirmations, stacked in one
+   column at the corner where the top bar meets the inspector. The
+   column itself ignores the pointer so an empty corner never blocks a
+   click on the map underneath. */
+.notif-col {
+  position: absolute; top: 0.7rem; right: 0.7rem; z-index: 12;
+  width: min(23rem, calc(100% - 1.4rem));
+  display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;
+  pointer-events: none;
+}
+.notif-col > * { pointer-events: auto; }
+
+/* Something arrived and has not been read. */
+
+
+
+/* ---------------------------- the party strip ----------------------------
+   Portraits first: this is where the players' photos live. Drop image
+   files in the campaign's assets folder and point each actor's art at
+   one; until then, initials on the kind's colour hold the space.
+------------------------------------------------------------------ */
+
+.party {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem;
+  padding-bottom: 0.75rem; margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+/* Who is where never scrolls out of reach. */
+.party.is-sticky {
+  position: sticky; top: -0.9rem; z-index: 4;
+  background: var(--s1);
+  margin: -0.9rem -0.9rem 0.75rem; padding: 0.9rem 0.9rem 0.7rem;
+  box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.8);
+}
+
+.party-card {
+  position: relative; display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 0.5rem 0.5rem; text-align: left;
+  background: var(--s2); border-radius: var(--r);
+}
+.party-card:hover { background: var(--s3); }
+.party-card.is-selected { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+
+.party-face {
+  width: 40px; height: 40px; flex: none;
+  border-radius: 50%; overflow: hidden;
+  background: var(--s4); border: 2px solid var(--tok);
+  display: grid; place-items: center;
+}
+.party-face img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.party-face em { font-style: normal; font-size: 0.72rem; font-weight: 700; color: var(--tok); }
+
+.party-meta { min-width: 0; display: flex; flex-direction: column; gap: 0.05rem; }
+.party-name {
+  font-size: 0.76rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.party-where {
+  font-size: 0.64rem; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.party-where.is-away { color: var(--hidden); }
+
+.party-hp {
+  position: absolute; left: 0.5rem; right: 0.5rem; bottom: 4px;
+  height: 2.5px; border-radius: 2px; background: var(--s4); overflow: hidden;
+}
+.party-hp span { display: block; height: 100%; background: var(--accent); }
+
+
+/* ---------------------------- portrait ---------------------------- */
+
+.insp-portrait {
+  margin: 0; overflow: hidden; border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  display: grid; place-items: center;
+}
+/* contain, not cover: a tall character portrait in a narrow sidebar
+   gets letterboxed rather than beheaded. */
+.insp-portrait img {
+  display: block; width: 100%; height: auto;
+  max-height: 22rem; object-fit: contain;
+}
+
+/* ---------------------------- scrollbars ---------------------------- */
+
+* { scrollbar-width: thin; scrollbar-color: var(--s4) transparent; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--s4); border-radius: 5px;
+  border: 2px solid var(--s1); background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--line-2); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+
+/* ---------------------------- the table screen ----------------------------
+   A shared display is furniture: it shows and never operates. The left
+   side disappears entirely and the map takes the room.
+------------------------------------------------------------------ */
+
+/* The shared display is the map and nothing else: no rail, no drawer,
+   no inspector. The top bar stays, so the room can see where they are
+   and the DM can see the screen has not drifted. */
+.shell.is-table { grid-template-columns: minmax(0, 1fr); }
+
+/* Pins under a DM's hand: the drag IS the alignment tool. */
+.pin.is-draggable .pin-dot { cursor: grab; }
+.pin.is-draggable:active .pin-dot { cursor: grabbing; }
+
+
+
+
+/* ---------------------------- collapsible sections ----------------------------
+   Only where a panel holds several named piles: item groups, a place's
+   sub-locations, quests, the roster. A disclosure arrow on a leaf is
+   noise, so leaves do not get one.
+------------------------------------------------------------------ */
+
+.sect { border-bottom: 1px solid var(--line); }
+.sect:last-child { border-bottom: 0; }
+
+.sect-head {
+  width: 100%; display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.5rem 0.15rem; background: none; border-radius: var(--r-sm);
+  color: var(--ink-3); text-align: left;
+}
+.sect-head:hover { color: var(--ink-2); background: var(--s2); }
+.sect-head h3 { margin: 0; flex: 1; min-width: 0; color: inherit; }
+
+.sect-caret { flex: none; transition: transform 130ms ease; }
+.sect.is-open .sect-caret { transform: rotate(90deg); }
+
+.sect-count {
+  font-size: 0.66rem; font-variant-numeric: tabular-nums;
+  background: var(--s3); color: var(--ink-3);
+  padding: 0.05rem 0.35rem; border-radius: 999px;
+}
+.sect-body { padding: 0 0 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; }
+
+.sect.is-hidden-group .sect-head h3 { color: var(--hidden); }
+
+@media (prefers-reduced-motion: reduce) { .sect-caret { transition: none; } }
+
+
+/* ---------------------------- top bar ----------------------------
+   The two things a DM does constantly sit in the same place always,
+   disabled with a reason rather than appearing and disappearing, next
+   to a plain statement of what the shared screen is showing.
+------------------------------------------------------------------ */
+
+
+/* Disabled means inert: it keeps its own colours and does not respond
+   to the pointer at all, so hovering never suggests it can be used. */
+.tool:disabled { opacity: 0.38; cursor: default; }
+
+
+
+
+
+/* ---------------------------- panel furniture ----------------------------
+   Anything a panel keeps at its top — a search box, a column header —
+   sticks there while the body scrolls under it.
+------------------------------------------------------------------ */
+
+.panel-sticky {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--s1);
+  margin: 0 -0.95rem 0.5rem; padding: 0.55rem 0.95rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 0.45rem;
+}
+.panel-sticky .search { margin: 0; }
+.panel-sticky .matrix-head { margin: 0; position: static; }
+
+/* ---------------------------- scroll containment ----------------------------
+   No rubber band on a list that has nowhere left to go.
+------------------------------------------------------------------ */
+
+.inspector, .drawer-body, .sect-body, .matrix, .scenes, .items {
+  overscroll-behavior: none;
+}
+
+/* What the shared screen is showing, in words, so a DM looking ahead
+   can see at a glance that the room has not drifted with them. */
+
+/* Says what the shared screen is showing, and when you have wandered
+   off it is also the way back. One control, both roles. */
+/* Says what the shared screen is showing, and when you have wandered
+   off it is the way back. Reads as plain text and a dot, not a button:
+   the element is a button only so it can be clicked and focused. */
+.looking {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.72rem; color: var(--ink-3);
+  padding: 0.14rem 0.35rem; white-space: nowrap;
+  background: transparent; border: 0; border-radius: var(--r-sm);
+  flex: none; max-width: 15rem; overflow: hidden; text-overflow: ellipsis;
+}
+/* The same hover as a breadcrumb, because it is the same kind of thing:
+   a place you can go, written as text. */
+.looking:not(:disabled):hover { color: var(--ink); background: var(--s3); }
+
+.looking:disabled { opacity: 1; cursor: default; }
+.looking.is-away { color: var(--hidden); }
+.looking.is-away .looking-dot {
+  background: var(--hidden); box-shadow: 0 0 0 3px var(--hidden-soft);
+}
+.looking-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--s4); flex: none;
+}
+.looking-dot.is-live { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+@media (max-width: 900px) { .looking { display: none; } }
+
+/* ---------------------------- a top bar of fixed height ----------------------------
+   Labels never change width with state and never wrap, so the bar
+   cannot grow and push the map down.
+------------------------------------------------------------------ */
+
+.canvas-head {
+  height: 46px; flex: none; overflow: hidden;
+}
+.canvas-head .tools { flex: none; }
+.tool, .tool span { white-space: nowrap; }
+.trail {
+  min-width: 0; flex: 1 1 auto;
+  display: flex; align-items: center; gap: 0.15rem;
+  overflow: hidden;
+}
+.crumb {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 14rem; flex: 0 1 auto;
+}
+.crumb.is-more { flex: none; padding-inline: 0.35rem; letter-spacing: 0.06em; }
+.crumb-sep { flex: none; }
+
+
+/* ---------------------------- place rows ----------------------------
+   A place that contains places looks exactly like one that does not.
+   The difference is a small button beside it, which opens what is
+   inside without turning the row into a different kind of thing.
+------------------------------------------------------------------ */
+
+/* Every control on a place row reads the same: same padding, same
+   corner, same highlight under the pointer. */
+.scene-push, .scene-into {
+  flex: none; display: flex; align-items: center; gap: 0.2rem;
+  padding: 0.3rem 0.4rem; border-radius: var(--r-sm);
+  background: none; color: var(--ink-3);
+}
+.scene-push:hover:not(:disabled),
+.scene-into:hover { background: var(--s3); color: var(--ink); }
+.scene-push:disabled { opacity: 0.35; cursor: default; }
+
+.scene-into span {
+  font-size: 0.66rem; font-variant-numeric: tabular-nums;
+}
+.scene-into svg { transition: transform 130ms ease; }
+.scene-into.is-on svg { transform: rotate(-180deg); }
+.scene-into.is-on { color: var(--ink); }
+
+/* What is inside sits against a guide line under its own row. */
+.scene-inside {
+  margin: 0.1rem 0 0.25rem 0.55rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--line-2);
+  display: flex; flex-direction: column; gap: 0.15rem;
+}
+
+@media (prefers-reduced-motion: reduce) { .scene-into svg { transition: none; } }
+
+
+
+
+
+
+
+
+
+
+
+
+/* A sweep across empty map picks up the tokens it covers. */
+.marquee {
+  position: absolute; pointer-events: none; z-index: 7;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 2px;
+}
+
+
+/* The players' lobby. Art comes from campaign.json, so it belongs to
+   the campaign rather than the software; without it the page is plain.
+   The DM and the table screen never see this screen. */
+.join.has-art { position: relative; overflow: hidden; }
+.join-art {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  user-select: none; pointer-events: none;
+}
+.join.has-art::after {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(to bottom, rgb(6 8 11 / 0.55), rgb(6 8 11 / 0.85));
+}
+.join.has-art > *:not(.join-art) { position: relative; z-index: 1; }
+
+/* The name column gives way, so duplicate and remove hold their
+   position however long a token is called. */
+.insp-head > div { min-width: 0; flex: 1 1 auto; }
+.insp-head > .row { flex: none; }
+
+
+/* ---------------------------- zoom ----------------------------
+   A local view control: it never leaves this screen. Wheel zooms
+   toward the pointer, middle-drag or shift-drag pans, and the
+   percentage resets to the whole map.
+------------------------------------------------------------------ */
+
+.stage-clip.is-zoomed { cursor: grab; }
+.stage-clip.is-zoomed:active { cursor: grabbing; }
+
+.zoomer {
+  position: absolute; right: 0.75rem; bottom: 0.75rem; z-index: 6;
+  display: flex; align-items: stretch; gap: 1px;
+  border-radius: var(--r-sm); overflow: hidden;
+  background: rgb(6 8 11 / 0.72); backdrop-filter: blur(6px);
+  box-shadow: 0 3px 14px rgb(0 0 0 / 0.45);
+}
+.zoomer button {
+  background: none; border-radius: 0; color: var(--ink-2);
+  font-size: 0.78rem; line-height: 1; padding: 0.3rem 0.5rem;
+  min-width: 26px;
+}
+.zoomer button:hover:not(:disabled) { background: var(--s3); color: var(--ink); }
+.zoomer button:disabled { opacity: 0.35; }
+.zoomer-now {
+  font-size: 0.68rem; font-variant-numeric: tabular-nums; min-width: 46px;
+}
