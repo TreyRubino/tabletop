@@ -1,13 +1,13 @@
 import {
   RESERVED_GROUPS, PRESENCE, IDENTITY, HEALTH, DM_ONLY, TABLE,
-  DEFAULT_TOKEN_KINDS, FIXED_GROUPS, target,
+  DEFAULT_TOKEN_KINDS, FIXED_GROUPS, MAP_SCALE, REACH, target,
   type CampaignIR, type Scene, type Quest, type Clock, type Actor,
   type EntityId, type SceneId, type AudienceId, type Audience,
   type RevealTarget, type EntityKind, type SymbolEntry, type PlacementDef,
   type TokenKindDef, type EntryDef, type TokenShape, type EntryContent,
   type SceneEntry, type Cue, type QuestStage, type EntryStyle,
   type Check, type Grid, type Item, type StatBlock, type StatRow, type StatSection,
-  type SceneLink,
+  type SceneLink, type MapKind,
 } from './ir.js'
 
 export const SCHEMA_VERSION = 4
@@ -90,6 +90,7 @@ function lev(a: string, b: string): number {
 }
 
 const SHAPES: TokenShape[] = ['disc', 'hex', 'square', 'diamond', 'shield']
+const MAP_KINDS: MapKind[] = ['location', 'town', 'region']
 const STYLES: EntryStyle[] = ['plain', 'read']
 
 /* ---------------------------- the pass ---------------------------- */
@@ -154,8 +155,10 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
     .map((k, i) => {
       const p = rawKinds.length > 0 ? `/tokenKinds/${i}` : '/tokenKinds'
       if (!isObj(k)) { c.err(p, 'expected an object'); return blankKind() }
-      noStrayKeys(c, k, p, ['id', 'label', 'shape', 'accent', 'entries', 'party'])
+      noStrayKeys(c, k, p, ['id', 'label', 'shape', 'accent', 'entries', 'party', 'reach'])
       const kid = str(c, k.id, `${p}/id`)
+      const reach = k.reach === undefined || k.reach === null
+        ? null : num(c, k.reach, `${p}/reach`, 0, 1000, 5)
       const shape = str(c, k.shape, `${p}/shape`, { default: 'disc' }) as TokenShape
       if (!SHAPES.includes(shape)) c.err(`${p}/shape`, `expected one of ${SHAPES.join(', ')}, found "${shape}"`)
 
@@ -184,9 +187,13 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
         label: str(c, k.label, `${p}/label`, { default: kid }),
         shape, accent: str(c, k.accent, `${p}/accent`, { default: '#8f9bb0' }),
         entries,
-        groups: [PRESENCE, IDENTITY, HEALTH, ...custom],
+        /* A kind that can hit something gains a reach group, so its ring
+           is revealed and taken back exactly like its name or its
+           health — one more square on the row, no new machinery. */
+        groups: [PRESENCE, IDENTITY, HEALTH, ...(reach === null ? [] : [REACH]), ...custom],
         hasSecrets: entries.some(e => e.group === DM_ONLY),
         party: k.party === true,
+        reach,
       }
     })
 
@@ -262,7 +269,7 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
     const p = `/actors/${i}`
     if (!isObj(a)) { c.err(p, 'expected an object'); return blankActor() }
     noStrayKeys(c, a, p, ['id', 'kind', 'name', 'art', 'hp', 'entries', 'stats',
-      'narration', 'note', 'group', 'hidden'])
+      'narration', 'note', 'group', 'hidden', 'reach'])
     const aid = str(c, a.id, `${p}/id`)
     const kindId = str(c, a.kind, `${p}/kind`, { default: 'npc' })
     const kind = tokenKinds.find(k => k.id === kindId) ?? null
@@ -277,6 +284,9 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
       kind: kindId,
       name: str(c, a.name, `${p}/name`),
       art: asset(a.art, `${p}/art`) ?? autoArt(aid),
+      /* Undefined means "whatever this kind reaches"; a number here is
+         the one wolf with a longer bite. */
+      reach: a.reach === undefined ? null : num(c, a.reach, `${p}/reach`, 0, 1000, 5),
       maxHp: a.hp === undefined ? null : num(c, a.hp, `${p}/hp`, 1, 100000),
       entries: readEntryMap(a.entries, `${p}/entries`, kind, kindId),
       stats: readStats(c, a.stats, `${p}/stats`),
@@ -297,7 +307,7 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
   const items: Item[] = rawItems.map((it, i) => {
     const p = `/items/${i}`
     if (!isObj(it)) { c.err(p, 'expected an object'); return blankItem() }
-    noStrayKeys(c, it, p, ['id', 'name', 'art', 'text', 'detail', 'secret', 'group', 'reveal'])
+    noStrayKeys(c, it, p, ['id', 'name', 'art', 'text', 'detail', 'secret', 'stats', 'group', 'reveal'])
     return {
       id: str(c, it.id, `${p}/id`) as EntityId,
       name: str(c, it.name, `${p}/name`),
@@ -305,6 +315,7 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
       text: str(c, it.text, `${p}/text`, { default: '' }),
       detail: str(c, it.detail, `${p}/detail`, { default: '' }),
       secret: str(c, it.secret, `${p}/secret`, { default: '' }),
+      stats: readStats(c, it.stats, `${p}/stats`),
       group: str(c, it.group, `${p}/group`, { default: 'Items' }),
     }
   })
@@ -369,10 +380,14 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
     const p = `/scenes/${i}`
     if (!isObj(s)) return blankScene()
     noStrayKeys(c, s, p, [
-      'id', 'name', 'background', 'description', 'entries', 'tokens',
+      'id', 'name', 'map', 'background', 'art', 'description', 'entries', 'tokens',
       'cues', 'checks', 'options', 'entry', 'grid', 'pin', 'links', 'prep', 'reveal',
     ])
     const sid = str(c, s.id, `${p}/id`) as SceneId
+    const map = str(c, s.map, `${p}/map`, { default: 'location' }) as MapKind
+    if (!MAP_KINDS.includes(map)) {
+      c.err(`${p}/map`, `expected one of ${MAP_KINDS.join(', ')}, found "${map}"`)
+    }
     readReveal(s.reveal, `${p}/reveal`, sid, FIXED_GROUPS.scene, 'a scene')
 
     const entries: SceneEntry[] = arr(c, s.entries, `${p}/entries`).map((e, j) => {
@@ -467,11 +482,13 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
       const gp = `${p}/grid`
       if (!isObj(s.grid)) c.err(gp, 'expected an object')
       else {
-        noStrayKeys(c, s.grid, gp, ['cols', 'unit', 'label', 'overlay'])
+        /* No unit here on purpose: the scene's map kind decides it, so
+           two scenes of the same kind cannot disagree about how far a
+           square is. */
+        noStrayKeys(c, s.grid, gp, ['cols', 'overlay'])
         grid = {
-          cols: num(c, s.grid.cols, `${gp}/cols`, 2, 200, 24),
-          unit: num(c, s.grid.unit, `${gp}/unit`, 0.1, 10000, 5),
-          label: str(c, s.grid.label, `${gp}/label`, { default: 'ft' }),
+          cols: num(c, s.grid.cols, `${gp}/cols`, 2, 400, 24),
+          ...MAP_SCALE[map],
           overlay: s.grid.overlay !== false,
         }
       }
@@ -526,7 +543,9 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
     return {
       id: sid,
       name: str(c, s.name, `${p}/name`),
+      map: MAP_KINDS.includes(map) ? map : 'location',
       background: asset(s.background, `${p}/background`),
+      art: asset(s.art, `${p}/art`),
       description: str(c, s.description, `${p}/description`, { default: '' }),
       entries, placements, cues, checks, options, entry, grid, pin, links, prep,
     }
@@ -626,7 +645,7 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
   const clocks: Clock[] = rawClocks.map((k, i) => {
     const p = `/clocks/${i}`
     if (!isObj(k)) { c.err(p, 'expected an object'); return blankClock() }
-    noStrayKeys(c, k, p, ['id', 'name', 'caption', 'max', 'events', 'reveal'])
+    noStrayKeys(c, k, p, ['id', 'name', 'caption', 'note', 'max', 'events', 'reveal'])
     const kid = str(c, k.id, `${p}/id`) as Clock['id']
     readReveal(k.reveal, `${p}/reveal`, kid, FIXED_GROUPS.clock, 'a clock')
     const max = num(c, k.max, `${p}/max`, 1, 64, 6)
@@ -644,6 +663,7 @@ export function validate(raw: unknown, assets: AssetProbe): Result<CampaignIR> {
       id: kid,
       name: str(c, k.name, `${p}/name`),
       caption: str(c, k.caption, `${p}/caption`, { default: '' }),
+      note: k.note === undefined ? null : str(c, k.note, `${p}/note`),
       max, events,
     }
   })
@@ -776,10 +796,10 @@ type Prep = Scene['prep']
 
 const blankKind = (): TokenKindDef => ({
   id: '', label: '', shape: 'disc', accent: '#8f9bb0',
-  entries: [], groups: [PRESENCE, IDENTITY, HEALTH], hasSecrets: false, party: false,
+  entries: [], groups: [PRESENCE, IDENTITY, HEALTH], hasSecrets: false, party: false, reach: null,
 })
 const blankActor = (): Actor => ({
-  id: '' as Actor['id'], kind: 'npc', name: '', art: null, maxHp: null,
+  id: '' as Actor['id'], kind: 'npc', name: '', art: null, reach: null, maxHp: null,
   entries: {}, stats: null, narration: [], note: null, group: 'Other', hidden: false,
 })
 const blankEntry = (): SceneEntry =>
@@ -787,7 +807,7 @@ const blankEntry = (): SceneEntry =>
 const blankPlacement = (): PlacementDef =>
   ({ id: '' as PlacementDef['id'], actor: '' as PlacementDef['actor'], x: 0.5, y: 0.5, label: null })
 const blankScene = (): Scene => ({
-  id: '' as SceneId, name: '', background: null, description: '',
+  id: '' as SceneId, name: '', map: 'location', background: null, art: null, description: '',
   entries: [], placements: [], cues: [], checks: [], options: [],
   entry: { x: 0.5, y: 0.72 }, grid: null, pin: null, links: [],
   prep: { want: '', threat: '', wrong: '', notes: '' },
@@ -795,12 +815,13 @@ const blankScene = (): Scene => ({
 const blankCheck = (): Check =>
   ({ id: '', skill: '', dc: null, when: '', success: '', failure: '', reveals: [] })
 const blankItem = (): Item => ({
-  id: '' as EntityId, name: '', art: null, text: '', detail: '', secret: '', group: 'Items',
+  id: '' as EntityId, name: '', art: null, text: '', detail: '', secret: '',
+  stats: null, group: 'Items',
 })
 const blankQuest = (): Quest =>
   ({ id: '' as Quest['id'], title: '', giver: '', start: '', stages: [] })
 const blankClock = (): Clock =>
-  ({ id: '' as Clock['id'], name: '', caption: '', max: 4, events: [] })
+  ({ id: '' as Clock['id'], name: '', caption: '', note: null, max: 4, events: [] })
 
 export function formatDiagnostics(diags: Diagnostic[]): string {
   return diags.map(d =>

@@ -79,6 +79,192 @@ Lint a campaign without starting anything:
 npm run lint:campaign -- campaigns/mine
 ```
 
+## The kit
+
+Every panel is assembled from ten templates in `packages/web/src/ui/kit.tsx`.
+No panel builds a box, a button, a menu, a search field, a hint or an empty
+state of its own. If something does not fit, the template changes and every
+panel changes with it.
+
+    Card    one entity, one box, the same slots in the same order
+    Acts    a row of controls
+    Action  a button. One shape; danger and on are colour, not variants
+    Pick    a labelled menu
+    Chip    a small on/off button
+    Sticky  a panel header that stays put while the panel scrolls
+    Find    a search field, built on Sticky
+    Hint    a line of guidance
+    Empty   nothing here yet, said in one voice
+
+A card's slots are `art`, `title`, `tag`, `meta`, `body`, `secret`, `acts`,
+and a card fills every one its entity has data for. `meta` has no empty case
+on purpose: a card with nothing to report says "held by nobody" rather than
+dropping the line and standing shorter than the card above it. This is why a
+person and an item are the same object on screen — they are literally the
+same component, differing in what they say and never in how.
+
+### A component declared inside a component is a new component
+
+`Row` in the Places panel used to live inside `ScenesPanel`. That makes it a
+fresh function on every render, which React reads as a different kind of
+component, so the entire list was thrown away and rebuilt whenever anything
+changed — including opening a cellar. Every card remounted, and a card scrolls
+itself into view when it mounts selected, so the sidebar jumped on every
+click. `Row` lives at module scope now and takes what it needs as props.
+
+## Scale follows the kind of map
+
+A scene says what it is — `location`, `town` or `region` — and the grid unit
+follows: five feet, five yards, five miles. The unit is not writable per
+scene, because that is exactly how Phandalin came to claim a hundred feet a
+square while every room around it counted in fives.
+
+Column counts are measured, not guessed. Every map in the pack is exactly
+forty pixels to a square, so the count is the image width over forty. Where a
+map draws its own squares, the overlay stays off rather than laying a second
+set on top that would not line up.
+
+## Reach
+
+A creature's reach is a number of feet on its token kind, overridable on the
+one actor that is unusual. It is a reveal group like any other, so it appears
+as another square per audience on that creature's row in Reveals — knowing an
+ogre reaches ten feet is knowing something about the ogre.
+
+The ring draws under the tokens, and only on the ones selected: a ring on
+every creature at once is unreadable, and "what can reach this square" is
+always asked about one of them. Its radius is a share of the map's width, so
+it holds through zoom, and `cellsForFeet` converts a reach in feet onto a map
+counted in yards or miles.
+
+Movement deliberately has no ring. Speed is a budget that depletes, splits
+across a turn and stops at walls, so a circle would be a lie on every map with
+a door in it — and there is no turn to draw it for.
+
+### A place has two pictures
+
+`background` is the map the table plays on. `art` is a picture of the place
+for the sidebar. They are different jobs: a battle grid makes a poor
+illustration of somewhere the party has only heard about, and a landscape
+makes a poor surface to put tokens on. Either may be absent.
+
+### Seven type sizes and four gaps
+
+The stylesheet had twenty-six distinct font sizes, most of them a hundredth
+of a rem apart, eleven line heights and twelve corner radii. That is drift,
+not hierarchy: nothing reads as deliberate when 0.81, 0.82 and 0.83 all
+appear on text that does the same job.
+
+Everything is now named and everything sits on the scale:
+
+    --t-label   0.68   eyebrows, dt, captions, small grey labels
+    --t-ui      0.72   anything you click
+    --t-body    0.80   hints, empties, toasts, secondary text
+    --t-strong  0.82   names, titles, inputs
+    --t-prose   0.86   reading text
+    --t-read    0.94   read-aloud
+    --t-title   1.02   the one heading size
+
+    --g-1 .2   --g-2 .35   --g-3 .5   --g-4 .85
+
+Three line heights, three radii, and one colour for a section heading.
+Amber had come to mean two things — "the players cannot see this" on a truth
+block, and "this is a heading" on cues and narration. It now means only the
+first, so a heading is grey wherever it appears and amber always signals
+hidden content.
+
+### One order on every screen
+
+Every inspector screen reads in the same sequence, whatever it is describing:
+
+    picture
+    read-aloud, prose, entries        the lore, and the part that can be revealed
+                                      a token's narration is read-aloud, so it
+                                      sits here rather than with the triggers
+    prep and DM truth                 what it wants, what it can do to them
+    They can                          the options
+    If they roll, Cues, narration     the triggers, last
+
+A place, a token, an item, a quest and a clock all follow it. The sections a
+given subject has no data for are simply absent; the order of the ones it has
+never changes.
+
+### Controls live on the left, reading lives on the right
+
+The left side is where you operate on a thing. The right side is where it is
+described, including everything the players cannot see. A card therefore has
+no slot for the DM's hidden line at all — no amber blocks in any panel — and
+the inspector carries them instead.
+
+Duplicate and remove moved from the inspector onto the People cards. The
+token's reveal-group chips were deleted rather than moved, because Reveals is
+where reveals happen. The skill checks moved into Reveals as an ordinary bin. A check is a reveal
+with a die roll in front of it, so it is a `Row` like the others, drawn by the
+same function, inside the same `Section`; only the heading and the count
+differ. The one thing a check does not share is where its targets come from —
+most rows own one target per group, a check grants a list the campaign wrote —
+so `Row` has an optional `grant` for that and nothing else changes. Health stayed in the inspector: it is a value nothing
+else edits.
+
+Every inspector screen — item, quest, token, place, and the nothing-selected
+state —
+opens with the same sticky header of name and subtitle. The subtitle names
+the kind of thing it is, in one word: `Place`, `Quest`, `Rewards`, `Player
+character`.
+
+A token, an item and a quest are three answers to one question — what is the
+sidebar describing — so their setters are mutually exclusive: choosing any one
+clears the other two, and clicking bare map clears all three and falls back to
+the place.
+
+### One button
+
+Every button in the app is one rule. `.act` and the eight controls that once
+had shapes of their own — chips, breadcrumbs, top-bar tools, quest stage
+jumps, join links, matrix column heads, the scene picker's menus, the zoom
+controls — share a single declaration for size, colour, padding and corner,
+and take their fill and ring from `.sheen`. A chip is no longer a pill on a
+filled background; a menu is no longer a bordered box. The reveal matrix cell
+keeps its compact footprint because it sits in a grid, but it lights the same
+way as everything else rather than filling solid accent.
+
+### Everything about a place is on the Reveals page
+
+Reveals is scoped to the map on screen, and reads top to bottom in the order a
+DM works: the place itself, who and what is standing in it, what is written
+here, what a good roll tells them, and the ways out. Every one of those is a
+`Row` drawn by one function inside one `Section` — only the heading and the
+count differ.
+
+A row that is a token standing on this map also carries duplicate and remove,
+after its squares, in the same button as everywhere else. Nothing else on the
+page can be copied or taken away, so nothing else sets that field.
+
+### One frame for every picture
+
+An item, a person, a monster, a place and an image pulled out of an entry all
+sit in the same 16:9 frame, so the sidebar does not change shape depending on
+what you clicked. `cover` rather than `contain` is what makes that true:
+contain keeps the whole image and lets its proportions set the height, which
+was the drift.
+
+The one exception is a player character, whose portrait is upright at 2:3 and
+larger than everything else. They are the faces at the table, not another
+thing on a shelf.
+
+### The shimmer
+
+One highlight for everything you can point at, taken from the breadcrumbs:
+`.sheen` fills to `--s3` under the pointer, and to `--accent-soft` with a
+hairline accent ring once the thing is chosen. It sets fill and ring only,
+never text colour, so a card's prose does not turn accent when the card
+opens. Cards, buttons, chips, menus, place rows, roster entries, matrix
+labels, breadcrumbs, the rail and the party strip all wear it.
+
+The one deliberate exception is a reveal matrix cell. A filled square there
+is a value — this audience knows this thing — not a selection, so it keeps a
+solid accent fill and takes the shimmer only on hover.
+
 ## The three layers
 
 **Authored** — `campaign.json`. Immutable at runtime. This is the program.
@@ -258,9 +444,24 @@ the name, the further off the map it sat.
 
 ## Zoom
 
-The wheel zooms toward the pointer, middle-drag or shift-drag pans, and
-the percentage in the corner returns to the whole map. A new map always
-opens at full view.
+The wheel zooms toward the pointer, and the percentage in the corner
+returns to the whole map. A new map always opens at full view.
+
+Panning follows one rule: **shift is the selection modifier, so
+shift-drag always sweeps up tokens.** Everything else about a drag on
+bare map depends on whether there is anywhere to pan to — at 1x the map
+already fits, so a plain drag can only mean a marquee; zoomed in, a
+plain drag grabs the map and moves it. Middle-drag pans at any zoom.
+
+Tokens and pins counter-scale by the inverse zoom, so a marker is the
+same size on screen at 8x as at 1x rather than swelling into a blob
+over the detail you zoomed in to see. It works because both are
+zero-size anchors: scaling one about its own centre shrinks the marker
+and its label offsets together without moving it off its point.
+
+The scale bar sits outside the transform, so it carries the zoom
+itself; otherwise it would quietly under-report the moment you zoomed
+in.
 
 Zoom is a *local view*: never sent, never logged, never on anybody
 else's screen. Two people can look at the same map at different
@@ -481,8 +682,16 @@ engine lays a row out and never interprets it. Sections are free-form,
 which is why every creature here has a **Running it** section alongside
 Traits and Actions.
 
-Stat blocks are DM-only by construction. They live in the secrets
-sidecar and have no branch that reaches a player surface.
+An **actor's** block is DM-only by construction: it lives in the
+secrets sidecar and has no branch that reaches a player surface. That
+is why every creature here carries a *Running it* section.
+
+An **item's** block is the opposite, and deliberately so — somebody
+holding a magic axe can read what it does. It travels with the item's
+`detail` reveal, so it reaches whoever holds it and nobody else.
+Because of that, an item block must contain only what the holder may
+see; DM guidance goes in the item's `secret`, which has no projectable
+branch. `test/statblocks.mjs` asserts both halves.
 
 ## Checks, options and notes
 

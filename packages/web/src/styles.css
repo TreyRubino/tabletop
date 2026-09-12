@@ -37,15 +37,35 @@
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
 
   --rail: 56px;
-  --drawer: 356px;
-  --insp: 336px;
+
+  /* ---- type scale. Seven steps and nothing between them. The app had
+     twenty-six distinct font sizes, most of them a hundredth of a rem
+     apart, which is drift rather than hierarchy. ---- */
+  --t-label: 0.68rem;   /* eyebrows, dt, captions, small grey labels */
+  --t-ui: 0.72rem;      /* anything you click */
+  --t-body: 0.8rem;     /* hints, empties, toasts, secondary text */
+  --t-strong: 0.82rem;  /* names, titles, inputs */
+  --t-prose: 0.86rem;   /* reading text */
+  --t-read: 0.94rem;    /* read-aloud */
+  --t-title: 1.02rem;   /* the one heading size */
+
+  /* ---- spacing. Four steps. ---- */
+  /* Behind the map: darker than the app so a map edge reads as an edge. */
+  --void: #06080b;
+  --r-xs: 3px;
+  --g-1: 0.2rem;
+  --g-2: 0.35rem;
+  --g-3: 0.5rem;
+  --g-4: 0.85rem;
+  /* One width for both side panels. The drawer sets it, because the
+     Reveals matrix needs the column room; the inspector matches so the
+     two sides of the app are never a near-miss apart. */
+  --side: 356px;
   --r: 6px;
   --r-sm: 4px;
 }
-
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
-
 body {
   background: var(--bg);
   position: fixed;
@@ -56,67 +76,99 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
-
 h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.012em; }
-h1 { font-size: 1rem; }
-h2 { font-size: 1.02rem; }
+h1 { font-size: var(--t-title); }
+h2 { font-size: var(--t-title); }
 h3 {
-  font-size: 0.66rem; color: var(--ink-3); font-weight: 600;
+  font-size: var(--t-label); color: var(--ink-3); font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.07em;
 }
-h4 { font-size: 0.86rem; }
+h4 { font-size: var(--t-prose); }
 p { margin: 0 0 0.55rem; }
-
 .prose { font-family: var(--serif); line-height: 1.62; max-width: 62ch; }
-.hint, .empty { color: var(--ink-3); font-size: 0.8rem; line-height: 1.5; }
-
+.hint, .empty { color: var(--ink-3); font-size: var(--t-body); line-height: 1.5; }
 .truth {
-  font-size: 0.81rem; line-height: 1.55; color: var(--ink-2);
+  font-size: var(--t-body); line-height: 1.62; color: var(--ink-2);
   border-left: 2px solid var(--hidden); padding-left: 0.6rem; margin: 0.4rem 0 0.5rem;
 }
-.next { font-size: 0.75rem; color: var(--hidden); opacity: 0.85; margin: 0; }
-
+/* One button. The metrics are the ones on a Places card, so anything
+   that does not deliberately say otherwise already matches. */
 button {
-  font: inherit; font-size: 0.79rem; color: var(--ink);
-  background: var(--s3); border: 1px solid transparent;
-  border-radius: var(--r-sm); padding: 0.32rem 0.6rem; cursor: pointer;
-  transition: background 90ms linear, color 90ms linear;
+  font: inherit; font-size: var(--t-ui); color: var(--ink-2);
+  background: transparent; border: 1px solid transparent;
+  border-radius: var(--r-sm); padding: 0.24rem 0.5rem; cursor: pointer;
 }
-button:hover:not(:disabled) { background: var(--s4); }
+button:hover:not(:disabled) { color: var(--ink); }
 button:disabled { opacity: 0.32; cursor: default; }
 button:focus-visible, a:focus-visible, input:focus-visible,
 select:focus-visible, textarea:focus-visible, summary:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
-button.ghost { background: transparent; color: var(--ink-2); }
-button.ghost:hover:not(:disabled) { background: var(--s2); color: var(--ink); }
-button.danger:hover:not(:disabled) { color: var(--bad); }
+/* ------------------------- the shimmer -------------------------
+   One highlight for everything you can point at, taken from the
+   breadcrumbs: a quiet fill under the pointer, and the same fill in
+   accent with a hairline ring once the thing is chosen. A card, a
+   button, a menu, a chip and a place row all use this and nothing
+   else, so "hovered" and "selected" look the same wherever you meet
+   them.
 
+   It sets fill and ring only. Text colour belongs to whatever is
+   wearing it, because a card's prose should not turn accent just
+   because the card is open.
+---------------------------------------------------------------- */
+
+.sheen { transition: background 90ms linear, color 90ms linear, box-shadow 90ms linear; }
+.sheen:hover:not(:disabled) { background: var(--s3); }
+.sheen.is-on {
+  background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent);
+}
+.sheen.is-on:hover:not(:disabled) { background: var(--accent-soft); }
+.sheen:disabled { background: transparent; }
+@media (prefers-reduced-motion: reduce) { .sheen { transition: none; } }
+/* ---------------------------- the button ----------------------------
+   Three states and no fourth: plain, the one act a screen exists for,
+   and the one that destroys something.
+------------------------------------------------------------------ */
+
+.act, .chip, .crumb, .tool, .stage-jump, .join-player, .matrix-col {
+  flex: none; display: inline-flex; align-items: center; gap: var(--g-2);
+  font: inherit; font-size: var(--t-ui); color: var(--ink-2);
+  background: transparent; border: 0;
+  padding: 0.24rem 0.5rem; border-radius: var(--r-sm);
+  cursor: pointer;
+}
+/* Under the pointer the text goes bright; chosen, it goes accent. The
+   fill and the ring behind both come from .sheen, which every one of
+   these wears. */
+.act:hover:not(:disabled), .chip:hover:not(:disabled),
+.crumb:not(:disabled):hover, .tool:hover:not(:disabled),
+.stage-jump:hover, .join-player:hover, .matrix-col:hover,
+
+.act.is-on, .chip.is-on, .tool.is-on, .stage-jump.is-on,
+.rail-btn.is-on, .matrix-col.is-on { color: var(--accent); }
+.act.is-danger:hover:not(:disabled) { color: var(--bad); }
+/* The odd one out on a row: what a card opens rather than what it does. */
+.act.is-end { margin-left: auto; }
 input[type="text"], textarea, select, .search {
-  font: inherit; font-size: 0.82rem; background: var(--s2);
+  font: inherit; font-size: var(--t-strong); background: var(--s2);
   border: 1px solid var(--line); border-radius: var(--r-sm);
   color: var(--ink); padding: 0.4rem 0.55rem; width: 100%;
 }
 textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 ::placeholder { color: var(--ink-3); }
-
-.row { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
-.stepper { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--ink-2); }
-.stepper span { min-width: 3.2rem; text-align: center; }
-
-.chip {
-  font-size: 0.72rem; padding: 0.22rem 0.55rem; border-radius: 999px;
-  background: var(--s2); color: var(--ink-2);
-}
-.chip:hover:not(:disabled) { background: var(--s4); color: var(--ink); }
-.chip.is-on { background: var(--accent); color: var(--on-accent); }
-.chip.is-locked {
-  background: var(--hidden-soft); color: var(--hidden); cursor: default;
-}
-
+.row { display: flex; gap: var(--g-2); align-items: center; flex-wrap: wrap; }
+/* A place to type, labelled the way a card labels its context line. */
+.field { display: flex; flex-direction: column; gap: var(--g-1); min-width: 0; }
+.field > span { font-size: var(--t-label); color: var(--ink-3); }
+.stepper { display: flex; align-items: center; gap: var(--g-2); color: var(--ink-2); }
+.stepper span { min-width: 3.2rem; text-align: center; font-size: var(--t-ui); }
+/* A chip is a button. It was a pill on a filled background, which made
+   the same act look like two different things depending on which card
+   you were standing on. */
+.chip.is-locked { color: var(--hidden); cursor: default; opacity: 1; }
 /* ---------------------------- stage ---------------------------- */
 
-.stage-clip { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #06080b; }
+.stage-clip { position: relative; flex: 1; min-height: 0; overflow: hidden; background: var(--void); }
 .stage { position: absolute; inset: 0; transform-origin: center; touch-action: none; }
 .world { position: absolute; }
 .stage, .stage * {
@@ -129,7 +181,6 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   user-select: none; pointer-events: none;
 }
 .stage-empty { flex: 1; display: grid; place-items: center; color: var(--ink-3); }
-
 /* Squares stay square: the cell is sized in pixels, not percentages,
    because the point of the grid is that a player can count it. */
 .grid-overlay {
@@ -138,13 +189,12 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
     linear-gradient(to right, rgb(255 255 255 / 0.075) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(255 255 255 / 0.075) 1px, transparent 1px);
 }
-
 .scale-bar {
   position: absolute; left: 0.75rem; bottom: 0.75rem;
-  display: flex; align-items: center; gap: 0.45rem;
+  display: flex; align-items: center; gap: var(--g-3);
   background: rgb(6 8 11 / 0.72); backdrop-filter: blur(6px);
   border-radius: var(--r-sm); padding: 0.28rem 0.5rem;
-  font-size: 0.68rem; color: var(--ink-2); pointer-events: none;
+  font-size: var(--t-label); color: var(--ink-2); pointer-events: none;
 }
 .scale-bar span {
   display: block; height: 5px; border-left: 1px solid var(--ink-2);
@@ -152,15 +202,16 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 }
 .scale-bar em { font-style: normal; }
 .scale-bar small { color: var(--ink-3); }
-
 .tok {
-  /* Zero-size anchor at the exact world coordinate. */
+  /* Zero-size anchor at the exact world coordinate. Scaling it by the
+     inverse zoom keeps the token the same size on screen without moving
+     it off its point, because the anchor has no size to move. */
   position: absolute; width: 0; height: 0;
+  transform: scale(var(--inv, 1));
   user-select: none;
 }
 .tok.is-draggable { cursor: grab; }
 .tok.is-draggable:active { cursor: grabbing; }
-
 .tok-ring {
   position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
   width: 46px; aspect-ratio: 1; padding: 2px; background: var(--tok);
@@ -172,8 +223,7 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   display: grid; place-items: center; overflow: hidden;
 }
 .tok-fill img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
-.tok-initials { font-size: 0.8rem; font-weight: 600; color: var(--tok); }
-
+.tok-initials { font-size: var(--t-body); font-weight: 600; color: var(--tok); }
 .tok.is-anon .tok-fill { background: var(--s2); }
 .tok.is-anon .tok-ring { opacity: 0.8; }
 .tok.is-selected .tok-ring {
@@ -181,22 +231,32 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   filter: drop-shadow(0 3px 10px rgb(0 0 0 / 0.6))
           drop-shadow(0 0 10px rgb(95 176 212 / 0.55));
 }
+/* How far the selected creature can hit. A share of the map's width, so
+   it holds its scale through zoom; square aspect so it is a circle in
+   pixels rather than an ellipse on a map that is not square. */
+.tok-reach {
+  position: absolute; z-index: 1;
+  transform: translate(-50%, -50%);
+  aspect-ratio: 1; border-radius: 50%;
+  border: 1px dashed var(--tok);
+  background: color-mix(in srgb, var(--tok) 9%, transparent);
+  pointer-events: none;
+}
 
 .tok-name {
   position: absolute; left: 0; top: 31px; transform: translateX(-50%);
-  font-size: 0.68rem; background: rgb(6 8 11 / 0.82);
-  padding: 0.05rem 0.35rem; border-radius: 3px; white-space: nowrap;
+  font-size: var(--t-label); background: rgb(6 8 11 / 0.82);
+  padding: 0.05rem 0.35rem; border-radius: var(--r-xs); white-space: nowrap;
 }
 .tok-hp {
   position: absolute; left: -23px; top: 25px;
   width: 46px; height: 3px; background: rgb(6 8 11 / 0.88);
-  border-radius: 2px; overflow: hidden;
+  border-radius: var(--r-xs); overflow: hidden;
 }
 .tok-hp span { display: block; height: 100%; background: var(--accent); }
-
 /* Amber hatching means: the players cannot see this. It goes on the
    visible parts, because the anchor itself has no size to paint. */
-.tok.is-hidden .tok-ring, .roster-item.is-hidden, .scene-row .is-hidden {
+.tok.is-hidden .tok-ring {
   background-image: repeating-linear-gradient(
     45deg, transparent, transparent 5px,
     rgb(211 162 74 / 0.28) 5px, rgb(211 162 74 / 0.28) 10px);
@@ -206,13 +266,13 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
     45deg, transparent, transparent 5px,
     rgb(211 162 74 / 0.28) 5px, rgb(211 162 74 / 0.28) 10px);
 }
-
 .pin {
   /* Zero-size anchor: the dot sits on the coordinate, the label hangs
      to the right, and the label's length cannot move the dot. */
   position: absolute; width: 0; height: 0;
+  transform: scale(var(--inv, 1));
   background: none; border: 0; padding: 0; overflow: visible;
-  color: var(--ink); font-size: 0.72rem; cursor: pointer;
+  color: var(--ink); font-size: var(--t-ui); cursor: pointer;
 }
 .pin:disabled { cursor: default; }
 .pin-dot {
@@ -232,19 +292,16 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 .pin:not(:disabled):hover .pin-dot { background: var(--accent-hi); }
 .pin:focus-visible { outline: none; }
 .pin:focus-visible .pin-label { outline: 2px solid var(--accent); outline-offset: 2px; }
-
 .is-arming .stage, .is-arming .tok, .is-arming .pin { cursor: crosshair; }
 .is-arming .tok { pointer-events: none; }
-
 /* ---------------------------- shell ---------------------------- */
 
 .shell {
   display: grid;
   min-height: 0;
-  grid-template-columns: var(--rail) minmax(0, 1fr) var(--insp);
+  grid-template-columns: var(--rail) minmax(0, 1fr) var(--side);
   height: 100%; position: relative; background: var(--bg);
 }
-
 .rail {
   background: var(--s1); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; align-items: center;
@@ -252,28 +309,26 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 }
 .rail-mark {
   width: 30px; height: 30px; display: grid; place-items: center;
-  background: var(--s3); border-radius: 8px;
-  color: var(--ink-2); font-weight: 700; font-size: 0.85rem; margin-bottom: 0.6rem;
+  background: var(--s3); border-radius: var(--r-sm);
+  color: var(--ink-2); font-weight: 700; font-size: var(--t-prose); margin-bottom: 0.6rem;
 }
 .rail-btn {
   position: relative;
   width: 38px; height: 38px; display: grid; place-items: center;
-  background: transparent; border-radius: 8px; color: var(--ink-3);
+  background: transparent; border-radius: var(--r-sm); color: var(--ink-3);
 }
-.rail-btn:hover:not(:disabled) { color: var(--ink); background: var(--s2); }
-.rail-btn.is-open { color: var(--accent); background: var(--accent-soft); }
-.rail-btn.is-open::before {
+.rail-btn:hover:not(:disabled) { color: var(--ink); }
+.rail-btn.is-on { color: var(--accent); }
+.rail-btn.is-on::before {
   content: ''; position: absolute; left: -0.6rem; top: 9px; bottom: 9px;
   width: 2px; border-radius: 0 2px 2px 0; background: var(--accent);
 }
-.rail-btn.is-alert { color: var(--hidden); }
 .rail-spacer { flex: 1; }
-
 /* Overlays the canvas rather than pushing it: pushing would reflow the
    map under the cursor every time a panel opens. Clicking the map
    closes it, because reaching for the map is a request for room. */
 .drawer {
-  position: absolute; top: 0; bottom: 0; left: var(--rail); width: var(--drawer);
+  position: absolute; top: 0; bottom: 0; left: var(--rail); width: var(--side);
   background: var(--s1); border-right: 1px solid var(--line-2);
   display: flex; flex-direction: column; z-index: 2;
   box-shadow: 14px 0 40px rgb(0 0 0 / 0.45);
@@ -292,36 +347,20 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   overscroll-behavior: contain; padding: 0 0.95rem 1.2rem;
 }
 .drawer-body .prose { max-width: 100%; overflow-wrap: break-word; }
-
 .canvas { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .canvas-stage { position: relative; flex: 1; min-height: 0; display: flex; }
-
 .canvas-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--g-4);
   padding: 0.5rem 0.9rem; background: var(--s1);
   border-bottom: 1px solid var(--line);
 }
-.trail { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; min-height: 1.7rem; }
-.crumb {
-  background: transparent; padding: 0.14rem 0.35rem; border-radius: var(--r-sm);
-  color: var(--ink-3); font-size: 0.82rem;
-}
-.crumb:disabled { color: var(--ink); opacity: 1; font-weight: 600; }
-.crumb:not(:disabled):hover { color: var(--ink); background: var(--s3); }
-.crumb-sep { color: var(--ink-3); font-size: 0.72rem; }
-
-.tools { display: flex; gap: 0.3rem; align-items: center; }
-.tool {
-  display: flex; align-items: center; gap: 0.35rem;
-  font-size: 0.76rem; background: transparent; color: var(--ink-2);
-  padding: 0.3rem 0.55rem;
-}
-.tool:hover:not(:disabled) { background: var(--s3); color: var(--ink); }
-.tool.is-on { background: var(--accent-soft); color: var(--accent); }
+.trail { display: flex; align-items: center; gap: var(--g-2); flex-wrap: wrap; min-height: 1.7rem; }
+.crumb:disabled, .crumb.is-on { color: var(--ink); opacity: 1; font-weight: 600; }
+.crumb-sep { color: var(--ink-3); font-size: var(--t-ui); }
+.tools { display: flex; gap: var(--g-2); align-items: center; }
 .tool.is-on:disabled { opacity: 1; }
 /* Both top-bar actions read identically: quiet with a hover highlight
    while there is something to do, and lit but inert once it is done. */
-.tool.is-alert { background: var(--hidden-soft); color: var(--hidden); }
 
 .inspector {
   background: var(--s1); border-left: 1px solid var(--line);
@@ -330,19 +369,24 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 }
 .inspector .prose { max-width: 100%; overflow-wrap: break-word; }
 .insp { min-width: 0; }
-.insp { display: flex; flex-direction: column; gap: 0.55rem; }
-.insp-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
-.insp-kind { color: var(--ink-3); font-size: 0.74rem; margin: 0; }
-.insp-groups { display: flex; flex-wrap: wrap; gap: 0.28rem; margin: 0.1rem 0 0.3rem; }
-
-.hp { display: flex; align-items: center; gap: 0.6rem; }
-.hp-bar { flex: 1; height: 6px; background: var(--s3); border-radius: 3px; overflow: hidden; }
+.insp { display: flex; flex-direction: column; gap: var(--g-3); }
+/* The name and what it is stay put while everything written about it
+   scrolls beneath. It sits in the space the party strip used to hold,
+   so the sidebar opens on the subject rather than on a header. */
+.insp-head {
+  position: sticky; top: -0.9rem; z-index: 4;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--g-3);
+  background: var(--s1);
+  margin: -0.9rem -0.9rem 0; padding: 0.9rem 0.9rem 0.55rem;
+  box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.8);
+}
+.insp-kind { color: var(--ink-3); font-size: var(--t-ui); margin: 0; }
+.hp { display: flex; align-items: center; gap: var(--g-3); }
+.hp-bar { flex: 1; height: 6px; background: var(--s3); border-radius: var(--r-xs); overflow: hidden; }
 .hp-bar span { display: block; height: 100%; background: var(--accent); }
-.hp-count { font-size: 0.78rem; color: var(--ink-2); }
-.hp-controls { display: flex; align-items: center; gap: 0.2rem; font-size: 0.77rem; color: var(--ink-2); }
+.hp-count { font-size: var(--t-body); color: var(--ink-2); }
+.hp-controls { display: flex; align-items: center; gap: var(--g-1); font-size: var(--t-ui); color: var(--ink-2); }
 .hp-controls span { min-width: 3.4rem; text-align: center; }
-.hp-controls button { padding: 0.18rem 0.36rem; }
-
 /* ---------------------------- content blocks ---------------------------- */
 
 .read {
@@ -350,183 +394,103 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   border-left: 3px solid var(--accent); background: var(--accent-soft);
   border-radius: 0 var(--r) var(--r) 0;
 }
-.read p { font-family: var(--serif); line-height: 1.66; margin: 0; font-size: 0.94rem; }
+.read p { font-family: var(--serif); line-height: 1.62; margin: 0; font-size: var(--t-read); }
 .read cite {
-  display: block; font-style: normal; font-size: 0.68rem;
+  display: block; font-style: normal; font-size: var(--t-label);
   color: var(--accent); margin-bottom: 0.3rem;
 }
-
-.entries { display: flex; flex-direction: column; gap: 0.55rem; }
+.entries { display: flex; flex-direction: column; gap: var(--g-3); }
 .entry { margin: 0; }
-.entry img {
-  width: 100%; aspect-ratio: 4/3; object-fit: cover;
-  border-radius: var(--r); background: var(--s2); display: block; margin-bottom: 0.3rem;
-}
-.entry figcaption { font-size: 0.7rem; color: var(--ink-3); margin-bottom: 0.15rem; }
-.entry .prose { font-size: 0.87rem; }
+.entry img { object-fit: cover; margin-bottom: 0.3rem; }
+.entry figcaption { font-size: var(--t-label); color: var(--ink-3); margin-bottom: 0.15rem; }
+.entry .prose { font-size: var(--t-prose); }
 .entries.is-secret { border-top: 1px solid var(--line); padding-top: 0.6rem; }
 .entry.is-secret figcaption { color: var(--hidden); }
 .entry.is-secret .prose { color: var(--ink-2); }
-
 .affordances { background: var(--s2); border-radius: var(--r); padding: 0.6rem 0.75rem; }
 .affordances h3 { margin-bottom: 0.3rem; }
-.affordances ul { margin: 0; padding-left: 1.05rem; display: flex; flex-direction: column; gap: 0.25rem; }
-.affordances li { font-size: 0.84rem; line-height: 1.5; color: var(--ink); }
-
-.checks { display: flex; flex-direction: column; gap: 0.45rem; }
-.check { background: var(--s2); border-radius: var(--r); padding: 0.6rem 0.7rem; }
-.check header { display: flex; flex-direction: column; gap: 0.1rem; margin-bottom: 0.35rem; }
-.check-skill { font-size: 0.82rem; font-weight: 600; }
-.check-skill em { font-style: normal; color: var(--accent); margin-left: 0.35rem; }
-.check-when { font-size: 0.7rem; color: var(--ink-3); }
-.check-out { font-size: 0.8rem; line-height: 1.5; margin: 0 0 0.25rem; padding-left: 0.6rem; }
-.check-out.is-pass { border-left: 2px solid var(--accent); color: var(--ink); }
-.check-out.is-fail { border-left: 2px solid var(--line-2); color: var(--ink-3); }
-.check-grant { display: flex; align-items: center; gap: 0.28rem; flex-wrap: wrap; margin-top: 0.35rem; }
-.check-grant > span { font-size: 0.7rem; color: var(--ink-3); }
-
-.cues { display: flex; flex-direction: column; gap: 0.5rem; }
-.cues h3 { color: var(--hidden); }
+.affordances ul { margin: 0; padding-left: 1.05rem; display: flex; flex-direction: column; gap: var(--g-1); }
+.affordances li { font-size: var(--t-prose); line-height: 1.5; color: var(--ink); }
+.cues { display: flex; flex-direction: column; gap: var(--g-3); }
 .cue { border-left: 2px solid var(--hidden-soft); padding-left: 0.6rem; }
-.cue-when { display: block; font-size: 0.68rem; color: var(--hidden); margin-bottom: 0.1rem; }
-.cue p { margin: 0; font-size: 0.81rem; line-height: 1.5; color: var(--ink-2); }
-
+.cue-when { display: block; font-size: var(--t-label); color: var(--ink-3); margin-bottom: 0.1rem; }
+.cue p { margin: 0; font-size: var(--t-body); line-height: 1.5; color: var(--ink-2); }
+/* What you say when they miss, dimmer than what you say when they hit. */
+.check-miss { color: var(--ink-3); }
 .narration {
   background: var(--hidden-soft); border-radius: var(--r); padding: 0.6rem 0.75rem;
-  display: flex; flex-direction: column; gap: 0.3rem;
+  display: flex; flex-direction: column; gap: var(--g-2);
 }
-.narration h3 { color: var(--hidden); }
-.narration .prose { font-size: 0.89rem; margin: 0; }
-.narration button { align-self: flex-start; font-size: 0.71rem; }
-
-.prep { margin: 0.2rem 0 0; display: flex; flex-direction: column; gap: 0.45rem; }
-.prep dt { color: var(--ink-3); font-size: 0.73rem; }
+.narration .prose { font-size: var(--t-prose); margin: 0; }
+.narration button { align-self: flex-start; }
+.prep { margin: 0.2rem 0 0; display: flex; flex-direction: column; gap: var(--g-3); }
+.prep dt { color: var(--ink-3); font-size: var(--t-label); }
 .prep dd { margin: 0.08rem 0 0; font-family: var(--serif); line-height: 1.5; }
 .prep dd.is-blank { color: var(--hidden); font-style: italic; opacity: 0.7; }
-
 /* ---------------------------- panels ---------------------------- */
 
 .search { margin-bottom: 0.6rem; }
-
-.scene-row { display: flex; gap: 0.25rem; align-items: stretch; margin-bottom: 1px; }
-.scene-open {
-  flex: 1; text-align: left; background: transparent; border-radius: var(--r-sm);
-  padding: 0.42rem 0.5rem; display: flex; flex-direction: column; gap: 0.1rem;
-}
-.scene-open:hover { background: var(--s2); }
-.scene-row.is-active .scene-open { background: var(--accent-soft); }
-.scene-row.is-active .scene-name { color: var(--accent); }
-.scene-name { font-size: 0.85rem; }
-.scene-meta { display: flex; gap: 0.45rem; font-size: 0.68rem; color: var(--ink-3); }
-.scene-meta em { font-style: normal; }
-.scene-meta .live { color: var(--accent); }
-.scene-push { font-size: 0.7rem; }
-
-.roster { display: flex; flex-direction: column; gap: 0.55rem; }
-.roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.35rem; }
-.roster-item {
-  position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
-  padding: 0.55rem 0.3rem; background: var(--s2); border-radius: var(--r); text-align: center;
-}
-.roster-item:hover { background: var(--s3); }
-.roster-item.is-armed { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
-.roster-chip { width: 32px; aspect-ratio: 1; padding: 2px; background: var(--tok); display: grid; place-items: center; }
-.roster-chip.tok-disc { clip-path: circle(50% at 50% 50%); }
-.roster-chip.tok-hex { clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%); }
-.roster-chip.tok-square { clip-path: inset(0 round 14%); }
-.roster-chip.tok-diamond { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
-.roster-chip.tok-shield { clip-path: polygon(50% 0%, 100% 14%, 100% 62%, 50% 100%, 0% 62%, 0% 14%); }
-.roster-fill { width: 100%; height: 100%; background: var(--s3); display: grid; place-items: center; overflow: hidden; }
-.roster-fill img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
-.roster-fill em { font-style: normal; font-size: 0.66rem; font-weight: 700; color: var(--tok); }
-.roster-name { font-size: 0.68rem; line-height: 1.25; color: var(--ink-2); }
-.roster-count {
-  position: absolute; top: 4px; right: 5px; font-size: 0.6rem; font-weight: 700;
-  color: var(--on-accent); background: var(--accent);
-  min-width: 15px; height: 15px; border-radius: 8px; display: grid; place-items: center;
-}
+/* A place is a card too. The controls sit in the card's own act row,
+   so a place row and a person row are the same object. */
 .arm-note {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
-  font-size: 0.78rem; color: var(--accent); background: var(--accent-soft);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--g-3);
+  font-size: var(--t-body); color: var(--accent); background: var(--accent-soft);
   border-radius: var(--r); padding: 0.45rem 0.5rem 0.45rem 0.65rem;
 }
 .arm-bar {
   position: absolute; left: 50%; bottom: 1.1rem; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 0.6rem;
+  display: flex; align-items: center; gap: var(--g-3);
   background: var(--s3); border-radius: 999px; padding: 0.42rem 0.5rem 0.42rem 0.85rem;
-  font-size: 0.8rem; box-shadow: 0 8px 30px rgb(0 0 0 / 0.55); z-index: 4;
+  font-size: var(--t-body); box-shadow: 0 8px 30px rgb(0 0 0 / 0.55); z-index: 4;
 }
 .arm-swatch { width: 9px; height: 9px; border-radius: 50%; background: var(--tok); }
-
 .matrix-head {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 0.2rem 0 0.45rem; color: var(--ink-2); font-size: 0.8rem;
+  padding: 0.2rem 0 0.45rem; color: var(--ink-2); font-size: var(--t-body);
 }
 .matrix-cols { display: flex; gap: 3px; }
-.matrix-col { width: 24px; padding: 0.1rem 0; font-size: 0.62rem; background: transparent; color: var(--ink-3); }
-.matrix-col:hover { color: var(--accent); background: var(--s2); }
-.matrix-bulk { display: flex; gap: 0.3rem; padding-bottom: 0.55rem; }
-.matrix-bulk button { font-size: 0.72rem; }
+.matrix-col { width: 28px; padding-inline: 0; justify-content: center; }
+.matrix-bulk { display: flex; gap: var(--g-2); padding-bottom: 0.55rem; }
 .matrix-row { padding: 0.5rem 0; border-top: 1px solid var(--line); }
+/* A row's name, and — for a token standing here — the two acts that
+   copy it or take it away, on the same line and pushed to the right. */
+.matrix-name { display: flex; align-items: center; gap: var(--g-2); margin-bottom: 0.28rem; }
 .matrix-label {
+  flex: 1 1 auto; min-width: 0;
   display: flex; flex-direction: column; align-items: flex-start;
-  margin-bottom: 0.28rem; background: transparent; padding: 0; width: 100%;
+  background: transparent; padding: 0;
 }
-.matrix-label:hover .matrix-title { color: var(--accent); }
-.matrix-title { font-size: 0.79rem; line-height: 1.35; text-align: left; }
-.matrix-detail { font-size: 0.65rem; color: var(--ink-3); }
+.matrix-name .card-acts { flex: none; margin-left: auto; }
+.matrix-title { font-size: var(--t-strong); font-weight: 600; line-height: 1.35; text-align: left; }
+.matrix-detail { font-size: var(--t-label); color: var(--ink-3); }
 .matrix-group { display: flex; align-items: center; justify-content: space-between; padding: 1px 0; }
-.matrix-group-name { font-size: 0.68rem; color: var(--ink-3); }
-.cell { width: 24px; height: 16px; padding: 0; border-radius: 3px; background: var(--s3); }
-.cell:hover { background: var(--s4); }
-.cell.is-on { background: var(--accent); }
+.matrix-group-name { font-size: var(--t-label); color: var(--ink-3); }
+.cell {
+  width: 28px; height: 17px; padding: 0;
+  border-radius: var(--r-sm); background: var(--s3);
+}
 
 .quest, .clock { padding: 0.65rem 0; border-top: 1px solid var(--line); }
 .quest:first-child, .clock:first-child { border-top: 0; }
 .quest header, .clock header {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.3rem;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--g-3); margin-bottom: 0.3rem;
 }
 .quest.is-hidden { opacity: 0.55; }
-.clock-caption { font-size: 0.74rem; color: var(--ink-3); margin: 0.1rem 0 0.4rem; }
 .track { display: flex; gap: 3px; margin: 0.4rem 0 0.5rem; }
-.track span { flex: 1; height: 8px; background: var(--s3); border-radius: 2px; }
+.track span { flex: 1; height: 8px; background: var(--s3); border-radius: var(--r-xs); }
 .track span.is-filled { background: var(--accent); }
-
-.branches { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.45rem; }
-.branch-label { width: 100%; font-size: 0.68rem; color: var(--ink-3); }
-.branch { font-size: 0.76rem; text-align: left; background: var(--accent-soft); color: var(--accent); }
-.branch:hover:not(:disabled) { background: var(--accent); color: var(--on-accent); }
-
 .stage-map { margin-top: 0.5rem; }
-.stage-map summary { font-size: 0.7rem; color: var(--ink-3); cursor: pointer; }
-.stage-jump {
-  display: flex; gap: 0.5rem; width: 100%; text-align: left;
-  background: transparent; padding: 0.3rem 0.4rem; margin-top: 2px; border-radius: var(--r-sm);
-}
-.stage-jump:hover { background: var(--s2); }
-.stage-jump.is-here { background: var(--s3); }
-.stage-id { font-size: 0.65rem; color: var(--ink-3); min-width: 5rem; }
-.stage-text { font-size: 0.74rem; color: var(--ink-2); line-height: 1.4; }
-.stage-jump.is-here .stage-text { color: var(--ink); }
-
-.items { display: flex; flex-direction: column; gap: 0.7rem; }
-.item {
-  display: flex; gap: 0.6rem; background: var(--s2);
-  border-radius: var(--r); padding: 0.6rem 0.7rem; margin-bottom: 0.35rem;
-}
-.item.is-hidden { background: var(--s1); }
-.item img { width: 52px; height: 52px; object-fit: cover; border-radius: var(--r-sm); flex: none; }
-.item h4 { margin-bottom: 0.15rem; }
-.item .prose { font-size: 0.83rem; }
+.stage-map summary { font-size: var(--t-label); color: var(--ink-3); cursor: pointer; }
+.stage-jump { display: flex; width: 100%; text-align: left; margin-top: 2px; }
+.stage-id { color: var(--ink-3); min-width: 5rem; }
+.stage-text { color: inherit; line-height: 1.5; }
+.stage-jump.is-on .stage-text { color: var(--ink); }
 .item-detail { color: var(--ink-2); }
-.give { display: flex; gap: 0.25rem; flex-wrap: wrap; margin-top: 0.35rem; }
 .whisper {
   margin: 0; padding: 0.7rem 0.85rem; background: var(--accent-soft);
   border-left: 3px solid var(--accent); border-radius: 0 var(--r) var(--r) 0;
 }
-.whisper p { font-family: var(--serif); font-size: 0.94rem; line-height: 1.6; margin: 0; }
-
-
+.whisper p { font-family: var(--serif); font-size: var(--t-read); line-height: 1.62; margin: 0; }
 /* ---------------------------- overlays ---------------------------- */
 
 .banner {
@@ -537,37 +501,29 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   font-family: var(--serif); font-size: clamp(1.8rem, 4.4vw, 3.6rem);
   line-height: 1.32; text-align: center; max-width: 20ch; margin: 0;
 }
-
 .toasts {
-  display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-end;
+  display: flex; flex-direction: column; gap: var(--g-2); align-items: flex-end;
   width: 100%;
 }
 .toast {
   background: var(--s3); border-left: 3px solid var(--accent);
   border-radius: var(--r-sm); padding: 0.5rem 0.75rem;
-  font-size: 0.8rem; max-width: 22rem; box-shadow: 0 8px 26px rgb(0 0 0 / 0.5);
+  font-size: var(--t-body); max-width: 22rem; box-shadow: 0 8px 26px rgb(0 0 0 / 0.5);
 }
-
 kbd {
-  font: inherit; font-size: 0.71rem; background: var(--s4);
-  border-radius: 4px; padding: 0.12rem 0.4rem; color: var(--ink);
+  font: inherit; font-size: var(--t-ui); background: var(--s4);
+  border-radius: var(--r-xs); padding: 0.12rem 0.4rem; color: var(--ink);
 }
-
 .join, .notice {
   height: 100%; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 0.85rem; padding: 2rem; text-align: center;
+  align-items: center; justify-content: center; gap: var(--g-4); padding: 2rem; text-align: center;
 }
-.join label { display: flex; flex-direction: column; gap: 0.3rem; width: 15rem; text-align: left; font-size: 0.78rem; color: var(--ink-3); }
-.join-players { display: flex; gap: 0.45rem; flex-wrap: wrap; justify-content: center; }
-.join-player {
-  color: var(--ink); text-decoration: none; background: var(--s3);
-  border-radius: var(--r); padding: 0.55rem 1rem;
-}
-.join-player:hover { background: var(--accent); color: var(--on-accent); }
-.join-alt { color: var(--ink-3); font-size: 0.78rem; margin-top: 0.5rem; }
+.join label { display: flex; flex-direction: column; gap: var(--g-2); width: 15rem; text-align: left; font-size: var(--t-body); color: var(--ink-3); }
+.join-players { display: flex; gap: var(--g-3); flex-wrap: wrap; justify-content: center; }
+.join-player { text-decoration: none; padding: 0.45rem 0.9rem; }
+.join-alt { color: var(--ink-3); font-size: var(--t-body); margin-top: 0.5rem; }
 .notice.is-quiet h1 { color: var(--ink-2); }
 .notice p { color: var(--ink-3); }
-
 /* A shared display is usually further from the reader than a laptop. */
 
 @media (max-width: 1060px) {
@@ -575,101 +531,69 @@ kbd {
   .inspector { display: none; }
   .drawer { width: calc(100vw - var(--rail)); }
 }
-
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
-
-
 /* ==================================================================
    v1: notes, and a few surface refinements.
 ================================================================== */
 
-button.primary {
-  background: var(--accent); color: var(--on-accent); font-weight: 600;
-}
-button.primary:hover:not(:disabled) { background: var(--accent-hi); }
-
 /* ---------------------------- notes ---------------------------- */
 
-.notes, .note-compose { display: flex; flex-direction: column; gap: 0.55rem; }
-.note-to { display: flex; gap: 0.25rem; flex-wrap: wrap; }
-
-.note {
-  background: var(--s2); border-radius: var(--r); padding: 0.7rem 0.8rem;
-  border-left: 3px solid var(--line-2);
-}
-.note.is-private { border-left-color: var(--accent); }
-.note.is-shared { border-left-color: var(--hidden); }
-.note.is-relayed { border-left-color: var(--line-2); background: var(--s1); }
-.note .prose { font-size: 0.95rem; margin: 0; }
-.note p { margin: 0 0 0.4rem; font-size: 0.85rem; line-height: 1.5; color: var(--ink-2); }
-.note header { display: flex; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.3rem; }
-.note footer { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.55rem; }
-.note-who { font-size: 0.74rem; color: var(--accent); font-weight: 600; }
-.note-state { font-size: 0.7rem; color: var(--ink-3); }
-.note-share { background: var(--accent); color: var(--on-accent); font-weight: 600; }
-.note-share:hover { background: var(--accent-hi); }
-
+/* A note is a card with a spine: accent while it is the recipient's
+   alone, amber once they have passed it on. */
+.card.is-private { border-left: 3px solid var(--accent); }
+.card.is-shared { border-left: 3px solid var(--hidden); }
+.card.is-relayed { border-left: 3px solid var(--line-2); background: var(--s1); }
 /* The recipient decides what happens next, so the prompt shows both
    choices rather than only announcing that something arrived. */
 .toast.is-note { border-left: 3px solid var(--accent); max-width: none; width: 100%; }
 .toast-eyebrow {
-  display: block; font-size: 0.68rem; color: var(--accent);
+  display: block; font-size: var(--t-label); color: var(--accent);
   font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
   margin-bottom: 0.3rem;
 }
-.toast.is-note p { margin: 0 0 0.6rem; font-size: 0.86rem; line-height: 1.5; }
-.toast.is-note .row { gap: 0.4rem; }
-
-
-
+.toast.is-note p { margin: 0 0 0.6rem; font-size: var(--t-prose); line-height: 1.5; }
+.toast.is-note .row { gap: var(--g-2); }
 /* ---------------------------- stat blocks ---------------------------- */
 
 .statblock {
   background: var(--s2); border-radius: var(--r);
   border-top: 2px solid var(--hidden);
-  padding: 0.7rem 0.8rem; display: flex; flex-direction: column; gap: 0.5rem;
+  padding: 0.7rem 0.8rem; display: flex; flex-direction: column; gap: var(--g-3);
 }
-.sb-summary { font-style: italic; color: var(--ink-2); font-size: 0.78rem; margin: 0; }
-
-.sb-bar { display: flex; flex-wrap: wrap; gap: 0.9rem; }
-.sb-bar div { display: flex; gap: 0.3rem; align-items: baseline; }
-.sb-bar dt { font-size: 0.68rem; color: var(--ink-3); margin: 0; }
-.sb-bar dd { margin: 0; font-size: 0.86rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-
+.sb-summary { font-style: italic; color: var(--ink-2); font-size: var(--t-body); margin: 0; }
+.sb-bar { display: flex; flex-wrap: wrap; gap: var(--g-4); }
+.sb-bar div { display: flex; gap: var(--g-2); align-items: baseline; }
+.sb-bar dt { font-size: var(--t-label); color: var(--ink-3); margin: 0; }
+.sb-bar dd { margin: 0; font-size: var(--t-prose); font-weight: 600; font-variant-numeric: tabular-nums; }
 .sb-abilities {
   /* However many attributes the system has. Six is D&D's number, not
      the engine's. */
   display: grid; grid-template-columns: repeat(auto-fit, minmax(2.4rem, 1fr));
-  gap: 0.2rem;
+  gap: var(--g-1);
   background: var(--s1); border-radius: var(--r-sm); padding: 0.4rem 0.3rem;
 }
 .sb-abilities div { text-align: center; }
-.sb-abilities dt { font-size: 0.62rem; color: var(--ink-3); margin: 0 0 0.1rem; }
-.sb-abilities dd { margin: 0; font-size: 0.72rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-.sb-meta { margin: 0; display: flex; flex-direction: column; gap: 0.15rem; }
-.sb-meta div { display: grid; grid-template-columns: 5.2rem 1fr; gap: 0.5rem; }
-.sb-meta dt { font-size: 0.68rem; color: var(--ink-3); margin: 0; }
-.sb-meta dd { margin: 0; font-size: 0.76rem; line-height: 1.45; }
-
+.sb-abilities dt { font-size: var(--t-label); color: var(--ink-3); margin: 0 0 0.1rem; }
+.sb-abilities dd { margin: 0; font-size: var(--t-ui); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sb-meta { margin: 0; display: flex; flex-direction: column; gap: var(--g-1); }
+.sb-meta div { display: grid; grid-template-columns: 5.2rem 1fr; gap: var(--g-3); }
+.sb-meta dt { font-size: var(--t-label); color: var(--ink-3); margin: 0; }
+.sb-meta dd { margin: 0; font-size: var(--t-body); line-height: 1.5; }
 .sb-section { border-top: 1px solid var(--line); padding-top: 0.45rem; }
 .sb-section h4 {
-  font-size: 0.7rem; color: var(--hidden); margin-bottom: 0.3rem;
+  margin-bottom: 0.3rem;
   letter-spacing: 0.02em;
-}
-.sb-section p { font-size: 0.78rem; line-height: 1.5; margin: 0 0 0.35rem; color: var(--ink-2); }
+ font-size: var(--t-label); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.07em; }
+.sb-section p { font-size: var(--t-body); line-height: 1.5; margin: 0 0 0.35rem; color: var(--ink-2); }
 .sb-section p:last-child { margin-bottom: 0; }
 .sb-section strong { color: var(--ink); font-weight: 600; }
-
-
 /* ---------------------------- notifications ----------------------------
    Tucked into the corner where the top bar meets the inspector, over the
    map rather than beside it: status the DM can see without looking away
    from what the table is looking at.
 ------------------------------------------------------------------ */
-
 
 /* Everything that arrives, arrives here: the status icons, the note a
    player must decide about, and the DM's confirmations, stacked in one
@@ -679,14 +603,11 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
 .notif-col {
   position: absolute; top: 0.7rem; right: 0.7rem; z-index: 12;
   width: min(23rem, calc(100% - 1.4rem));
-  display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;
+  display: flex; flex-direction: column; align-items: flex-end; gap: var(--g-3);
   pointer-events: none;
 }
 .notif-col > * { pointer-events: auto; }
-
 /* Something arrived and has not been read. */
-
-
 
 /* ---------------------------- the party strip ----------------------------
    Portraits first: this is where the players' photos live. Drop image
@@ -694,82 +615,43 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
    one; until then, initials on the kind's colour hold the space.
 ------------------------------------------------------------------ */
 
-.party {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem;
-  padding-bottom: 0.75rem; margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--line);
-}
-/* Who is where never scrolls out of reach. */
-.party.is-sticky {
-  position: sticky; top: -0.9rem; z-index: 4;
-  background: var(--s1);
-  margin: -0.9rem -0.9rem 0.75rem; padding: 0.9rem 0.9rem 0.7rem;
-  box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.8);
-}
-
-.party-card {
-  position: relative; display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.4rem 0.5rem 0.5rem; text-align: left;
-  background: var(--s2); border-radius: var(--r);
-}
-.party-card:hover { background: var(--s3); }
-.party-card.is-selected { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
-
-.party-face {
-  width: 40px; height: 40px; flex: none;
-  border-radius: 50%; overflow: hidden;
-  background: var(--s4); border: 2px solid var(--tok);
-  display: grid; place-items: center;
-}
-.party-face img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
-.party-face em { font-style: normal; font-size: 0.72rem; font-weight: 700; color: var(--tok); }
-
-.party-meta { min-width: 0; display: flex; flex-direction: column; gap: 0.05rem; }
-.party-name {
-  font-size: 0.76rem; font-weight: 600;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.party-where {
-  font-size: 0.64rem; color: var(--ink-3);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.party-where.is-away { color: var(--hidden); }
-
-.party-hp {
-  position: absolute; left: 0.5rem; right: 0.5rem; bottom: 4px;
-  height: 2.5px; border-radius: 2px; background: var(--s4); overflow: hidden;
-}
-.party-hp span { display: block; height: 100%; background: var(--accent); }
-
-
 /* ---------------------------- portrait ---------------------------- */
 
-.insp-portrait {
-  margin: 0; overflow: hidden; border-radius: var(--r);
-  border: 1px solid var(--line);
-  background: var(--bg);
-  display: grid; place-items: center;
-}
-/* contain, not cover: a tall character portrait in a narrow sidebar
-   gets letterboxed rather than beheaded. */
-.insp-portrait img {
-  display: block; width: 100%; height: auto;
-  max-height: 22rem; object-fit: contain;
-}
+/* ---------------------- pictures on the right ----------------------
+   One box. An item, a person, a monster, a place and a picture pulled
+   out of an entry all get the same frame at the same size, so the
+   sidebar does not change shape depending on what you clicked.
 
+   `cover` rather than `contain` is what makes that true: contain keeps
+   the whole image and lets its proportions set the height, which is
+   precisely the drift. The trade is that art wider or taller than the
+   frame is cropped, so keep new art near 16:9.
+
+   The one exception is a player character, whose portrait is upright
+   and larger than everything else — they are the faces at the table
+   rather than another thing on a shelf.
+------------------------------------------------------------------ */
+
+.insp-portrait, .entry img {
+  margin: 0; overflow: hidden; border-radius: var(--r);
+  border: 1px solid var(--line); background: var(--bg);
+  display: block; width: 100%; aspect-ratio: 16 / 9;
+}
+.insp-portrait img {
+  display: block; width: 100%; height: 100%; object-fit: cover;
+}
+.insp-portrait.is-pc { aspect-ratio: 2 / 3; }
 /* ---------------------------- scrollbars ---------------------------- */
 
 * { scrollbar-width: thin; scrollbar-color: var(--s4) transparent; }
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--s4); border-radius: 5px;
+  background: var(--s4); border-radius: var(--r-xs);
   border: 2px solid var(--s1); background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover { background-color: var(--line-2); }
 ::-webkit-scrollbar-corner { background: transparent; }
-
-
 /* ---------------------------- the table screen ----------------------------
    A shared display is furniture: it shows and never operates. The left
    side disappears entirely and the map takes the room.
@@ -779,14 +661,9 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
    no inspector. The top bar stays, so the room can see where they are
    and the DM can see the screen has not drifted. */
 .shell.is-table { grid-template-columns: minmax(0, 1fr); }
-
 /* Pins under a DM's hand: the drag IS the alignment tool. */
 .pin.is-draggable .pin-dot { cursor: grab; }
 .pin.is-draggable:active .pin-dot { cursor: grabbing; }
-
-
-
-
 /* ---------------------------- collapsible sections ----------------------------
    Only where a panel holds several named piles: item groups, a place's
    sub-locations, quests, the roster. A disclosure arrow on a leaf is
@@ -795,45 +672,32 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
 
 .sect { border-bottom: 1px solid var(--line); }
 .sect:last-child { border-bottom: 0; }
-
 .sect-head {
-  width: 100%; display: flex; align-items: center; gap: 0.4rem;
+  width: 100%; display: flex; align-items: center; gap: var(--g-2);
   padding: 0.5rem 0.15rem; background: none; border-radius: var(--r-sm);
   color: var(--ink-3); text-align: left;
 }
-.sect-head:hover { color: var(--ink-2); background: var(--s2); }
+.sect-head:hover { color: var(--ink-2); }
 .sect-head h3 { margin: 0; flex: 1; min-width: 0; color: inherit; }
-
 .sect-caret { flex: none; transition: transform 130ms ease; }
 .sect.is-open .sect-caret { transform: rotate(90deg); }
-
 .sect-count {
-  font-size: 0.66rem; font-variant-numeric: tabular-nums;
+  font-size: var(--t-label); font-variant-numeric: tabular-nums;
   background: var(--s3); color: var(--ink-3);
   padding: 0.05rem 0.35rem; border-radius: 999px;
 }
-.sect-body { padding: 0 0 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; }
-
+.sect-body { padding: 0 0 0.6rem; display: flex; flex-direction: column; gap: var(--g-2); }
 .sect.is-hidden-group .sect-head h3 { color: var(--hidden); }
-
 @media (prefers-reduced-motion: reduce) { .sect-caret { transition: none; } }
-
-
 /* ---------------------------- top bar ----------------------------
    The two things a DM does constantly sit in the same place always,
    disabled with a reason rather than appearing and disappearing, next
    to a plain statement of what the shared screen is showing.
 ------------------------------------------------------------------ */
 
-
 /* Disabled means inert: it keeps its own colours and does not respond
    to the pointer at all, so hovering never suggests it can be used. */
 .tool:disabled { opacity: 0.38; cursor: default; }
-
-
-
-
-
 /* ---------------------------- panel furniture ----------------------------
    Anything a panel keeps at its top — a search box, a column header —
    sticks there while the body scrolls under it.
@@ -844,11 +708,10 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
   background: var(--s1);
   margin: 0 -0.95rem 0.5rem; padding: 0.55rem 0.95rem 0.5rem;
   border-bottom: 1px solid var(--line);
-  display: flex; flex-direction: column; gap: 0.45rem;
+  display: flex; flex-direction: column; gap: var(--g-3);
 }
 .panel-sticky .search { margin: 0; }
 .panel-sticky .matrix-head { margin: 0; position: static; }
-
 /* ---------------------------- scroll containment ----------------------------
    No rubber band on a list that has nowhere left to go.
 ------------------------------------------------------------------ */
@@ -856,7 +719,6 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
 .inspector, .drawer-body, .sect-body, .matrix, .scenes, .items {
   overscroll-behavior: none;
 }
-
 /* What the shared screen is showing, in words, so a DM looking ahead
    can see at a glance that the room has not drifted with them. */
 
@@ -866,16 +728,15 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
    off it is the way back. Reads as plain text and a dot, not a button:
    the element is a button only so it can be clicked and focused. */
 .looking {
-  display: inline-flex; align-items: center; gap: 0.4rem;
-  font-size: 0.72rem; color: var(--ink-3);
+  display: inline-flex; align-items: center; gap: var(--g-2);
+  font-size: var(--t-ui); color: var(--ink-3);
   padding: 0.14rem 0.35rem; white-space: nowrap;
   background: transparent; border: 0; border-radius: var(--r-sm);
   flex: none; max-width: 15rem; overflow: hidden; text-overflow: ellipsis;
 }
 /* The same hover as a breadcrumb, because it is the same kind of thing:
    a place you can go, written as text. */
-.looking:not(:disabled):hover { color: var(--ink); background: var(--s3); }
-
+.looking:not(:disabled):hover { color: var(--ink); }
 .looking:disabled { opacity: 1; cursor: default; }
 .looking.is-away { color: var(--hidden); }
 .looking.is-away .looking-dot {
@@ -886,9 +747,7 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
   background: var(--s4); flex: none;
 }
 .looking-dot.is-live { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-
 @media (max-width: 900px) { .looking { display: none; } }
-
 /* ---------------------------- a top bar of fixed height ----------------------------
    Labels never change width with state and never wrap, so the bar
    cannot grow and push the map down.
@@ -901,71 +760,35 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
 .tool, .tool span { white-space: nowrap; }
 .trail {
   min-width: 0; flex: 1 1 auto;
-  display: flex; align-items: center; gap: 0.15rem;
+  display: flex; align-items: center; gap: var(--g-1);
   overflow: hidden;
 }
 .crumb {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 14rem; flex: 0 1 auto;
 }
-.crumb.is-more { flex: none; padding-inline: 0.35rem; letter-spacing: 0.06em; }
+.crumb.is-more { flex: none; letter-spacing: 0.06em; }
 .crumb-sep { flex: none; }
-
-
 /* ---------------------------- place rows ----------------------------
    A place that contains places looks exactly like one that does not.
    The difference is a small button beside it, which opens what is
    inside without turning the row into a different kind of thing.
 ------------------------------------------------------------------ */
 
-/* Every control on a place row reads the same: same padding, same
-   corner, same highlight under the pointer. */
-.scene-push, .scene-into {
-  flex: none; display: flex; align-items: center; gap: 0.2rem;
-  padding: 0.3rem 0.4rem; border-radius: var(--r-sm);
-  background: none; color: var(--ink-3);
-}
-.scene-push:hover:not(:disabled),
-.scene-into:hover { background: var(--s3); color: var(--ink); }
-.scene-push:disabled { opacity: 0.35; cursor: default; }
-
-.scene-into span {
-  font-size: 0.66rem; font-variant-numeric: tabular-nums;
-}
-.scene-into svg { transition: transform 130ms ease; }
-.scene-into.is-on svg { transform: rotate(-180deg); }
-.scene-into.is-on { color: var(--ink); }
-
 /* What is inside sits against a guide line under its own row. */
 .scene-inside {
   margin: 0.1rem 0 0.25rem 0.55rem;
   padding-left: 0.5rem;
   border-left: 1px solid var(--line-2);
-  display: flex; flex-direction: column; gap: 0.15rem;
+  display: flex; flex-direction: column; gap: var(--g-1);
 }
-
-@media (prefers-reduced-motion: reduce) { .scene-into svg { transition: none; } }
-
-
-
-
-
-
-
-
-
-
-
-
 /* A sweep across empty map picks up the tokens it covers. */
 .marquee {
   position: absolute; pointer-events: none; z-index: 7;
   border: 1px solid var(--accent);
   background: var(--accent-soft);
-  border-radius: 2px;
+  border-radius: var(--r-xs);
 }
-
-
 /* The players' lobby. Art comes from campaign.json, so it belongs to
    the campaign rather than the software; without it the page is plain.
    The DM and the table screen never see this screen. */
@@ -980,13 +803,10 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
   background: linear-gradient(to bottom, rgb(6 8 11 / 0.55), rgb(6 8 11 / 0.85));
 }
 .join.has-art > *:not(.join-art) { position: relative; z-index: 1; }
-
 /* The name column gives way, so duplicate and remove hold their
    position however long a token is called. */
 .insp-head > div { min-width: 0; flex: 1 1 auto; }
 .insp-head > .row { flex: none; }
-
-
 /* ---------------------------- zoom ----------------------------
    A local view control: it never leaves this screen. Wheel zooms
    toward the pointer, middle-drag or shift-drag pans, and the
@@ -995,7 +815,9 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
 
 .stage-clip.is-zoomed { cursor: grab; }
 .stage-clip.is-zoomed:active { cursor: grabbing; }
-
+/* A token under the pointer is still a token, not a handle on the map. */
+.stage-clip.is-zoomed .tok.is-draggable, .stage-clip.is-zoomed .pin { cursor: pointer; }
+.stage-clip.is-zoomed .tok.is-draggable:active { cursor: grabbing; }
 .zoomer {
   position: absolute; right: 0.75rem; bottom: 0.75rem; z-index: 6;
   display: flex; align-items: stretch; gap: 1px;
@@ -1004,12 +826,72 @@ button.primary:hover:not(:disabled) { background: var(--accent-hi); }
   box-shadow: 0 3px 14px rgb(0 0 0 / 0.45);
 }
 .zoomer button {
-  background: none; border-radius: 0; color: var(--ink-2);
-  font-size: 0.78rem; line-height: 1; padding: 0.3rem 0.5rem;
-  min-width: 26px;
+  border-radius: 0; line-height: 1;
+  min-width: 26px; justify-content: center;
 }
-.zoomer button:hover:not(:disabled) { background: var(--s3); color: var(--ink); }
+.zoomer button:hover:not(:disabled) { color: var(--ink); }
 .zoomer button:disabled { opacity: 0.35; }
 .zoomer-now {
-  font-size: 0.68rem; font-variant-numeric: tabular-nums; min-width: 46px;
+  font-size: var(--t-label); font-variant-numeric: tabular-nums; min-width: 46px;
 }
+/* A clock arriving, or advancing: the track comes with the words and
+   leaves on the same timer as any other notification. */
+.toast.is-clock { display: flex; flex-direction: column; gap: var(--g-2); }
+.toast-track { display: flex; gap: 3px; }
+.toast-track i {
+  flex: 1; min-width: 12px; height: 5px; border-radius: var(--r-xs); background: var(--s4);
+}
+.toast-track i.is-filled { background: var(--accent); }
+/* The whole card opens it, so it lifts as one thing rather than
+   highlighting a word inside itself. */
+/* ---------------------------- the card ----------------------------
+   One box for every entity in the app. A person, an item, a note, a
+   place and a roster entry are all this: same fill, same corner, same
+   padding, same seven slots in the same order.
+
+   Nothing below redefines the box. If a card needs to look different
+   it gets a modifier here, not a stylesheet of its own in a panel.
+------------------------------------------------------------------ */
+
+.card {
+  position: relative;
+  background: var(--s2); border-radius: var(--r);
+  padding: 0.55rem 0.65rem;
+  display: flex; flex-direction: column; gap: var(--g-2);
+  text-align: left; width: 100%;
+}
+.card.is-openable { cursor: pointer; }
+/* Nobody can see this yet: the card recedes, the amber tag does not. */
+.card.is-hidden { background: var(--s1); }
+.card.is-hidden .card-title, .card.is-hidden .prose { opacity: 0.72; }
+/* Portrait, then name over context line, then status. Every card, so
+   the names line up down the panel whatever the panel is. */
+.card-top { display: flex; align-items: center; gap: var(--g-3); min-width: 0; }
+.card-id { flex: 1 1 auto; min-width: 0; }
+.card-title {
+  font-size: var(--t-strong); font-weight: 600; color: var(--ink); letter-spacing: -0.012em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-meta {
+  margin: 0; font-size: var(--t-label); line-height: 1.35; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-meta strong { color: var(--ink-2); font-weight: 600; }
+.card-tag { flex: none; font-size: var(--t-label); color: var(--ink-3); white-space: nowrap; }
+.card-tag.is-hidden-tag { color: var(--hidden); }
+.card-tag.is-live-tag { color: var(--accent); }
+.card .prose { font-size: var(--t-strong); margin: 0; }
+.card .truth { margin: 0; }
+.card-acts { display: flex; align-items: center; gap: var(--g-2); flex-wrap: wrap; }
+/* A token standing on this map can also be copied or taken away. The
+   two acts sit after its squares, on the same row, in the same button
+   as everywhere else. */
+/* --------------------------- panels ---------------------------
+   A panel is a stack of cards and nothing else, so it owns spacing
+   and stops there.
+------------------------------------------------------------------ */
+
+.items, .notes, .note-compose, .scenes, .quests, .clocks, .roster, .matrix {
+  display: flex; flex-direction: column; gap: var(--g-2);
+}
+.sect-body > .card + .card { margin-top: 0.4rem; }

@@ -31,6 +31,18 @@ export interface ShellState {
   setViewing: (id: string | null) => void
   selected: string | null
   setSelected: (id: string | null) => void
+  /* A token, an item, a quest and a clock are four answers to one
+     question — what is the sidebar describing — so the setters are
+     mutually exclusive: choosing any clears the rest. */
+  selectedItem: string | null
+  setSelectedItem: (id: string | null) => void
+  selectedQuest: string | null
+  setSelectedQuest: (id: string | null) => void
+  selectedClock: string | null
+  setSelectedClock: (id: string | null) => void
+  /** The token the inspector is describing, which is not always the
+      token your hand is on: clicking the map picks up without reading. */
+  readToken: string | null
   /** Actor armed for placement: the next map click drops it. DM only. */
   arming: string | null
   setArming: (actorId: string | null) => void

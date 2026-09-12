@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  TABLE, target, findActor, findTokenKind,
+  TABLE, target, findActor, findTokenKind, cellsForFeet,
   type EntityId, type PlacementId, type World,
 } from '@tabletop/core'
 import { Stage, TokenDisc, PinMarker } from './ui/Stage'
@@ -9,6 +9,7 @@ import { PANELS } from './panels/panels'
 import { Inspector } from './panels/Inspector'
 import { activeScene, type DMControls, type ShellState } from './shell'
 import type { Command } from '@tabletop/core'
+import { Action } from './ui/kit'
 
 export function Table({
   world, dm, send, toasts,
@@ -27,12 +28,49 @@ export function Table({
      it, so `setSelected` still means "exactly this and nothing else"
      everywhere it is already called. */
   const [group, setGroup] = useState<string[]>([])
-  const setSelected = useCallback((id: string | null) => {
+  const [selectedItem, setSelectedItemOnly] = useState<string | null>(null)
+  const [selectedQuest, setSelectedQuestOnly] = useState<string | null>(null)
+  const [selectedClock, setSelectedClockOnly] = useState<string | null>(null)
+  /* The token the sidebar is describing. Separate from `selected`,
+     which is the token your hand is on. Picking one up on the map must
+     not throw away whatever you were reading. */
+  const [readToken, setReadToken] = useState<string | null>(null)
+
+  /* A token, an item, a quest and a clock are four answers to the same
+     question, so choosing one always clears the rest — including when
+     the answer is none of them. Clicking bare map clears all of them and
+     the sidebar falls back to the place. */
+  const only = (
+    token: string | null, item: string | null,
+    quest: string | null, clock: string | null,
+  ) => {
+    setSelectedOnly(token); setGroup([]); setReadToken(token)
+    setSelectedItemOnly(item); setSelectedQuestOnly(quest); setSelectedClockOnly(clock)
+  }
+  /* Reading and pointing are two different acts. `setSelected` says
+     "describe this on the right", and the panels use it. Clicking the
+     map only picks a token up, so it sets the token and leaves whatever
+     the sidebar was reading exactly where it was. */
+  const setSelected = useCallback((id: string | null) => only(id, null, null, null), [])
+  /* Dropping what is in your hand. Deliberately does not touch what the
+     inspector is reading. */
+  const setSelectedOnMap = useCallback((id: string | null) => {
     setSelectedOnly(id); setGroup([])
   }, [])
+  const setSelectedItem = useCallback((id: string | null) => only(null, id, null, null), [])
+  const setSelectedQuest = useCallback((id: string | null) => only(null, null, id, null), [])
+  const setSelectedClock = useCallback((id: string | null) => only(null, null, null, id), [])
   const picked = (id: string) => id === selected || group.includes(id)
   const [arming, setArming] = useState<string | null>(null)
   const [crumbsOpen, setCrumbsOpen] = useState(false)
+  /* The inspector is a scrolling column, and a new subject starts at
+     its own beginning. Without this you open a short item after a long
+     stat block and land halfway down a page whose top you never saw. */
+  const inspector = useRef<HTMLElement>(null)
+  useEffect(() => {
+    inspector.current?.scrollTo({ top: 0 })
+  }, [selected, selectedItem, selectedQuest, selectedClock, viewing])
+
   const dragging = useRef<PlacementId | null>(null)
   const draggingPin = useRef<string | null>(null)
   const draggingWay = useRef<string | null>(null)
@@ -77,8 +115,13 @@ export function Table({
   }, [panels, isTableScreen])
 
   useEffect(() => {
-    if (selected && scene && !scene.tokens.some(t => t.id === selected)) setSelected(null)
+    if (selected && scene && !scene.tokens.some(t => t.id === selected)) setSelectedOnMap(null)
+    if (readToken && scene && !scene.tokens.some(t => t.id === readToken)) setReadToken(null)
   }, [scene, selected])
+
+  /* Arming a token is a request to look at the map: the next click
+     lands it. The drawer is over the map, so it gets out of the way. */
+  useEffect(() => { if (arming) setOpenPanel(null) }, [arming])
 
   // Moving somewhere else re-collapses the trail.
   useEffect(() => { setCrumbsOpen(false) }, [scene?.id])
@@ -92,19 +135,18 @@ export function Table({
   /* The drawer overlays the canvas, so a click anywhere outside it is a
      request for room. Capture phase, and deliberately not swallowed:
      the click still lands on whatever it hit. */
-  useEffect(() => {
-    if (!openPanel) return
-    const onDown = (e: PointerEvent) => {
-      const el = e.target as HTMLElement | null
-      if (el?.closest('.drawer') || el?.closest('.rail')) return
-      setOpenPanel(null)
-    }
-    document.addEventListener('pointerdown', onDown, true)
-    return () => document.removeEventListener('pointerdown', onDown, true)
-  }, [openPanel])
+  /* The drawer used to close on any click outside it. It is a working
+     surface, not a menu: you click the map constantly while it is open
+     and losing the panel every time is worse than the space it costs.
+     It closes on the X, on its own rail button, on its number key, and
+     on its own when you arm a token to place. Nothing else. */
 
   const shell: ShellState = {
     world, dm, send, viewing, setViewing, selected, setSelected, arming, setArming,
+    selectedItem, setSelectedItem,
+    selectedQuest, setSelectedQuest,
+    selectedClock, setSelectedClock,
+    readToken,
   }
   const Panel = panels.find(p => p.id === openPanel)
   const armed = arming && dm ? findActor(dm.ir, arming) : null
@@ -135,7 +177,7 @@ export function Table({
         </div>
         {panels.map((p, i) => (
           <button key={p.id}
-            className={`rail-btn ${openPanel === p.id ? 'is-open' : ''}`}
+            className={`rail-btn sheen ${openPanel === p.id ? 'is-on' : ''}`}
             onClick={() => setOpenPanel(openPanel === p.id ? null : p.id)}
             title={`${p.label}  (${i + 1})`} aria-label={p.label}
             aria-pressed={openPanel === p.id}>
@@ -144,7 +186,7 @@ export function Table({
         ))}
         <div className="rail-spacer" />
         {dm && (
-          <button className="rail-btn" title={`Undo  (${dm.logLength})`} aria-label="Undo"
+          <button className="rail-btn sheen" title={`Undo  (${dm.logLength})`} aria-label="Undo"
             onClick={dm.undo} disabled={dm.logLength === 0}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
               strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -159,9 +201,9 @@ export function Table({
         <section className="drawer" aria-label={Panel.label}>
           <header className="drawer-head">
             <h2>{Panel.label}</h2>
-            <button className="ghost" onClick={() => setOpenPanel(null)} aria-label="Close panel">
+            <Action onClick={() => setOpenPanel(null)} aria-label="Close panel">
               &times;
-            </button>
+            </Action>
           </header>
           <div className="drawer-body"><Panel.Component {...shell} /></div>
         </section>
@@ -181,15 +223,22 @@ export function Table({
                 <>
                   {hidden.length > 0 && (
                     <>
-                      <button className="crumb is-more" onClick={() => setCrumbsOpen(true)}
+                      <button className="crumb is-more sheen" onClick={() => setCrumbsOpen(true)}
                         title={hidden.map(h => h.name).join(' / ')}>&hellip;</button>
                       <span className="crumb-sep" aria-hidden>/</span>
                     </>
                   )}
                   {shownCrumbs.map((step, i) => (
                     <span key={step.id}>
-                      <button className="crumb" disabled={step.id === all[all.length - 1]?.id}
-                        onClick={() => setViewing(step.id)}>{step.name}</button>
+                      {/* The step you are standing on wears the same lit
+                          state everything chosen wears. It stays clickable:
+                          clicking it points the sidebar back at this place. */}
+                      <button
+                        className={`crumb sheen ${step.id === all[all.length - 1]?.id ? 'is-on' : ''}`}
+                        title={`Look at ${step.name}`}
+                        onClick={() => { setViewing(step.id); setSelected(null) }}>
+                        {step.name}
+                      </button>
                       {i < shownCrumbs.length - 1 && <span className="crumb-sep" aria-hidden>/</span>}
                     </span>
                   ))}
@@ -202,7 +251,7 @@ export function Table({
                 is showing, and when you have wandered off it is also the
                 way back. Inert when you are already there, so it never
                 offers a journey of no distance. */}
-            <button className={`looking ${following ? '' : 'is-away'}`}
+            <button className={`looking sheen ${following ? '' : 'is-away'}`}
               disabled={following}
               title={following
                 ? 'You are looking at what the table is looking at'
@@ -213,6 +262,7 @@ export function Table({
                 ? 'the table sees this'
                 : `the table sees ${presentedName ?? 'nothing'}`}
             </button>
+
           </div>
         </header>
 
@@ -223,7 +273,10 @@ export function Table({
             grid={scene.grid}
             viewport={!dm && following ? world.viewport : undefined}
             frameRef={frame}
-            onBackgroundClick={() => setSelected(null)}
+            /* Bare map drops whatever is in your hand and leaves the
+               sidebar alone. The map's own page is reached by clicking
+               its name in the breadcrumbs, not by missing a token. */
+            onBackgroundClick={() => setSelectedOnMap(null)}
             onClickAt={arming ? placeHere : undefined}
             onPointerMoveAt={(x, y) => {
               if (dragging.current) {
@@ -284,7 +337,7 @@ export function Table({
                   ;(e.target as Element).setPointerCapture?.(e.pointerId)
                 }}
                 onClick={() => {
-                  if (!arming && !pinMoved.current) { setViewing(l.id); setSelected(null) }
+                  if (!arming && !pinMoved.current) { setViewing(l.id); setSelectedOnMap(null) }
                 }} />
             ))}
 
@@ -300,9 +353,31 @@ export function Table({
                 }}
                 onClick={() => {
                   // A drag corrects the map; only a clean click travels.
-                  if (!arming && !pinMoved.current) { setViewing(p.id); setSelected(null) }
+                  if (!arming && !pinMoved.current) { setViewing(p.id); setSelectedOnMap(null) }
                 }} />
             ))}
+            {/* Reach rings, under the tokens rather than over them. Only
+                the selected token draws one: a ring on every creature at
+                once is a plate of spaghetti, and the question "what can
+                reach this square" is always asked about one of them. The
+                radius is a share of the map's width, so it stays true
+                through zoom and pan without being recomputed. */}
+            {scene.grid && scene.tokens.map(t => {
+              if (!t.reach || !picked(t.id)) return null
+              /* Half a cell past the last square it can hit, so the ring
+                 encloses those squares rather than cutting through their
+                 middles and hugging the token. */
+              const cells = cellsForFeet(scene.grid!, t.reach) + 0.5
+              const width = (cells / scene.grid!.cols) * 200
+              return (
+                <div key={`reach:${t.id}`} className="tok-reach" aria-hidden
+                  style={{
+                    left: `${t.x * 100}%`, top: `${t.y * 100}%`,
+                    width: `${width}%`, ['--tok' as string]: t.accent,
+                  }} />
+              )
+            })}
+
             {scene.tokens.map(t => (
               <TokenDisc key={t.id} name={t.name} art={t.art} accent={t.accent} shape={t.shape}
                 x={t.x} y={t.y} hp={t.hp} selected={selected === t.id}
@@ -352,10 +427,12 @@ export function Table({
             <span className="toast-eyebrow">Told to you alone</span>
             <p>{unread[0].text}</p>
             <div className="row">
-              <button className="primary" onClick={() => send({ t: 'shareNote', note: unread[0].id })}>
+              <Action onClick={() => send({ t: 'shareNote', note: unread[0].id })}>
                 tell the others
-              </button>
-              <button onClick={() => send({ t: 'seeNote', note: unread[0].id })}>keep it to myself</button>
+              </Action>
+              <Action onClick={() => send({ t: 'seeNote', note: unread[0].id })}>
+                keep it to myself
+              </Action>
               {unread.length > 1 && <span className="hint">{unread.length - 1} more</span>}
             </div>
           </div>
@@ -371,12 +448,14 @@ export function Table({
               ['--tok' as string]: findTokenKind(dm!.ir, armed.kind)?.accent ?? '#8f9bb0',
             }} />
             <span>Placing <strong>{armed.name}</strong> {'\u2014'} click the map</span>
-            <button className="ghost" onClick={() => setArming(null)}>cancel (esc)</button>
+            <Action onClick={() => setArming(null)}>cancel</Action>
           </div>
         )}
       </main>
 
-      {!isTableScreen && <aside className="inspector"><Inspector {...shell} /></aside>}
+      {!isTableScreen && (
+        <aside className="inspector" ref={inspector}><Inspector {...shell} /></aside>
+      )}
 
       {world.role === 'player' && world.banner && (
         <div className="banner"><p>{world.banner}</p></div>

@@ -238,11 +238,19 @@ export function apply(ir: CampaignIR, s: SessionState, c: Command): SessionState
       seen.add(target(c.placement as unknown as EntityId, IDENTITY))
       if (actor.maxHp != null) seen.add(target(c.placement as unknown as EntityId, HEALTH))
 
-      return {
-        ...moved,
-        reveals: { ...moved.reveals, [owner.id]: [...seen] },
-        presented: { ...moved.presented, [owner.id]: { scene: c.scene, viewport: FULL_VIEW } },
-      }
+      /* Sending somebody where the table already is puts them back with
+         the table rather than splitting them off to look at the same
+         map through their own window. A personal override that matches
+         the table's is not a split, it is a stranded flag: it would
+         leave the panel calling them "off on their own", leave rejoin
+         lit forever, and stop them following the next time the table
+         moves. So going home clears the override instead of setting
+         one. */
+      const presented = { ...moved.presented }
+      if (presented[TABLE]?.scene === c.scene) delete presented[owner.id]
+      else presented[owner.id] = { scene: c.scene, viewport: FULL_VIEW }
+
+      return { ...moved, reveals: { ...moved.reveals, [owner.id]: [...seen] }, presented }
     }
 
     case 'movePin': {

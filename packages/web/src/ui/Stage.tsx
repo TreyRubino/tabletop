@@ -3,6 +3,7 @@ import {
   type ReactNode, type PointerEvent,
 } from 'react'
 import type { Viewport, TokenShape, Grid } from '@tabletop/core'
+import { initials } from './kit'
 
 /* ------------------------------------------------------------------
    The stage holds a *world*: a box with exactly the background image's
@@ -12,6 +13,11 @@ import type { Viewport, TokenShape, Grid } from '@tabletop/core'
    player's differently-shaped laptop. One coordinate space, and it is
    the image's.
 ------------------------------------------------------------------ */
+
+/** How far a marker may shrink before it stops being readable. Only
+    bites when zoomed in, where the floor is what kept a token wider
+    than the square it is standing in. */
+const MARKER_FLOOR = 0.28
 
 export interface StageProps {
   background: string | null
@@ -86,7 +92,9 @@ export function Stage({
   }, [ref])
 
   /** Middle-drag anywhere, or shift-drag on bare map. */
-  const pan = useRef<{ sx: number; sy: number; x: number; y: number } | null>(null)
+  const pan = useRef<
+    { sx: number; sy: number; x: number; y: number; button: number; moved: boolean } | null
+  >(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
   /** Natural aspect of the background, width over height. */
   const [aspect, setAspect] = useState<number | null>(null)
@@ -138,9 +146,19 @@ export function Stage({
       ref={clip}
       onPointerDown={e => {
         const bare = isBackdrop(e.target)
-        if (e.button !== 1 && !(e.button === 0 && e.shiftKey && bare)) return
+        /* Middle-drag always pans. Plain left-drag on bare map pans too,
+           but only once there is somewhere to pan to — at 1x the map
+           already fits, so a drag there can only mean a marquee.
+           Shift keeps its meaning everywhere: it is the selection
+           modifier, so shift-drag always sweeps. */
+        const grab = e.button === 1
+          || (e.button === 0 && bare && !e.shiftKey && !onClickAt && v.zoom > 1)
+        if (!grab) return
         e.preventDefault()
-        pan.current = { sx: e.clientX, sy: e.clientY, x: v.x, y: v.y }
+        pan.current = {
+          sx: e.clientX, sy: e.clientY, x: v.x, y: v.y,
+          button: e.button, moved: false,
+        }
         ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
       }}
       onPointerMove={e => {
@@ -148,6 +166,7 @@ export function Stage({
         if (!p) return
         const r = ref.current?.getBoundingClientRect()
         if (!r) return
+        if (Math.abs(e.clientX - p.sx) > 3 || Math.abs(e.clientY - p.sy) > 3) p.moved = true
         setView(cur => ({
           ...cur,
           x: hold(p.x - (e.clientX - p.sx) / r.width, cur.zoom),
@@ -155,9 +174,15 @@ export function Stage({
         }))
       }}
       onPointerUp={e => {
-        if (!pan.current) return
+        const p = pan.current
+        if (!p) return
         pan.current = null
         ;(e.currentTarget as Element).releasePointerCapture(e.pointerId)
+        /* Zoomed in, this handler claims the press before the marquee
+           can, so a press that never became a drag has to be reported
+           as what it is: a click on empty map. Without this the sidebar
+           silently stops falling back to the place once you zoom. */
+        if (!p.moved && p.button === 0) onBackgroundClick?.()
       }}
     >
       <div
@@ -165,12 +190,14 @@ export function Stage({
         ref={ref}
         style={{ transform: `scale(${v.zoom}) translate(${(0.5 - v.x) * 100}%, ${(0.5 - v.y) * 100}%)` }}
         onPointerDown={e => {
-          if (e.button !== 0 || e.shiftKey) return
+          if (e.button !== 0) return
           if (onClickAt) {
             const p = toWorld(e)
             if (p) { onClickAt(p.x, p.y); return }
           }
           if (!isBackdrop(e.target)) return
+          // Zoomed in without shift, the drag is a pan; leave it alone.
+          if (v.zoom > 1 && !e.shiftKey) return
           if (!marquee) { onBackgroundClick?.(); return }
           const p = toWorld(e)
           if (!p) return
@@ -208,7 +235,16 @@ export function Stage({
         <div
           className="world"
           data-world
-          style={{ left: fit.left, top: fit.top, width: fit.w, height: fit.h }}
+          /* Tokens and pins are zero-size anchors, so scaling them by the
+             inverse zoom shrinks the marker and its label offsets
+             together. Bounded at both ends: never larger than its own
+             size, and never smaller than MARKER_FLOOR, past which the
+             name is unreadable and the ring is a hairline. Beyond that
+             point markers grow with the map again, at half its rate. */
+          style={{
+            left: fit.left, top: fit.top, width: fit.w, height: fit.h,
+            ['--inv' as string]: Math.min(1, Math.max(1 / v.zoom, MARKER_FLOOR)),
+          }}
         >
           {background
             ? <img
@@ -248,7 +284,7 @@ export function Stage({
       <div className="zoomer">
         <button title="Zoom out" aria-label="Zoom out" disabled={v.zoom <= 1}
           onClick={() => zoomAt(v.x, v.y, 1 / 1.4)}>&minus;</button>
-        <button className="zoomer-now" title="Back to the whole map"
+        <button className="zoomer-now sheen" title="Back to the whole map"
           disabled={v.zoom === 1} onClick={() => setView({ x: 0.5, y: 0.5, zoom: 1 })}>
           {Math.round(v.zoom * 100)}%
         </button>
@@ -258,7 +294,7 @@ export function Stage({
 
       {grid && cell > 4 && (
         <div className="scale-bar" aria-hidden>
-          <span style={{ width: `${cell}px` }} />
+          <span style={{ width: `${cell * v.zoom}px` }} />
           <em>{grid.unit} {grid.label}</em>
           {rows > 0 && <small>{grid.cols} {'\u00d7'} {rows}</small>}
         </div>
@@ -308,9 +344,9 @@ export interface DiscProps {
 export function TokenDisc({
   name, art, accent, shape, x, y, hp, selected, hiddenFromPlayers, draggable, onPointerDown,
 }: DiscProps) {
-  const initials = name
-    ? name.replace(/^The\s+/i, '').split(' ').map(w => w[0]).join('').slice(0, 2)
-    : null
+  /* Same rule as a card's thumbnail, so a token and its row in a panel
+     never fall back to two different sets of letters. */
+  const letters = name ? initials(name) : null
 
   /* A zero-size anchor at the exact coordinate. The ring is centred on
      it; the name and health hang below it. Nothing about the label's
@@ -332,7 +368,7 @@ export function TokenDisc({
           {art
             ? <img src={`/assets/${art}`} alt="" draggable={false}
                 onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-            : <span className="tok-initials">{initials ?? ''}</span>}
+            : <span className="tok-initials">{letters ?? ''}</span>}
         </div>
       </div>
       {hp && (

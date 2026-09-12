@@ -128,5 +128,61 @@ await wait(170)
   if (table1 !== table0) { console.log('  FAIL: a monster dragged a screen with it'); bad++ }
 }
 
+// 10. A vision and a journey are different acts, and the table sits
+//     out both of them.
+{
+  dm.ws.send(JSON.stringify({t:'cmd',cmd:{t:'moveParty',scene:'phandalin'}}))
+  await wait(160)
+  const home = sess().placements['region.pc.emeric'].scene
+  const tableHome = sess().presented.table?.scene
+
+  // show: his screen moves, his body does not, the table does not
+  dm.ws.send(JSON.stringify({t:'cmd',cmd:{t:'present',audience:'emeric',scene:'manse'}}))
+  await wait(150)
+  let em = [...emeric.msgs].reverse().find(m=>m.t==='update').update.world
+  console.log('\nshow (a vision):')
+  console.log('  emeric watching:', em.presented,
+    '| his token:', sess().placements['region.pc.emeric'].scene,
+    '| table:', sess().presented.table?.scene)
+  if (em.presented !== 'manse') { console.log('  FAIL: he did not see it'); bad++ }
+  if (sess().placements['region.pc.emeric'].scene !== home) { console.log('  FAIL: his body moved'); bad++ }
+  if (sess().presented.table?.scene !== tableHome) { console.log('  FAIL: the table followed'); bad++ }
+
+  // it does not expire on its own
+  dm.ws.send(JSON.stringify({t:'cmd',cmd:{t:'clockTicks',clock:'clock.town',ticks:1}}))
+  await wait(150)
+  em = [...emeric.msgs].reverse().find(m=>m.t==='update').update.world
+  console.log('  still there after an unrelated command:', em.presented === 'manse')
+  if (em.presented !== 'manse') { console.log('  FAIL: the vision expired by itself'); bad++ }
+
+  // rejoin ends it
+  dm.ws.send(JSON.stringify({t:'cmd',cmd:{t:'follow',audience:'emeric'}}))
+  await wait(150)
+  em = [...emeric.msgs].reverse().find(m=>m.t==='update').update.world
+  console.log('  rejoin ends it:', em.presented === tableHome)
+  if (em.presented !== tableHome) { console.log('  FAIL: rejoin did not end it'); bad++ }
+
+  // send: body and screen move together, table still stays
+  dm.ws.send(JSON.stringify({t:'cmd',cmd:{t:'sendToScene',placement:'region.pc.emeric',scene:'barrow'}}))
+  await wait(150)
+  em = [...emeric.msgs].reverse().find(m=>m.t==='update').update.world
+  console.log('\nsend (a journey):')
+  console.log('  token:', sess().placements['region.pc.emeric'].scene,
+    '| his screen:', em.presented, '| table:', sess().presented.table?.scene)
+  if (sess().placements['region.pc.emeric'].scene !== 'barrow') { console.log('  FAIL: he did not travel'); bad++ }
+  if (em.presented !== 'barrow') { console.log('  FAIL: his screen did not follow'); bad++ }
+  if (sess().presented.table?.scene !== tableHome) { console.log('  FAIL: the table followed'); bad++ }
+
+  // an NPC moves with no screen attached to it at all
+  const before = sess().presented.table?.scene
+  dm.ws.send(JSON.stringify({t:'cmd',cmd:{t:'sendToScene',placement:'phandalin.npc.harbin',scene:'axeholm'}}))
+  await wait(150)
+  console.log('\nmoving an NPC:')
+  console.log('  harbin now at:', sess().placements['phandalin.npc.harbin'].scene,
+    '| table:', sess().presented.table?.scene)
+  if (sess().placements['phandalin.npc.harbin'].scene !== 'axeholm') { console.log('  FAIL: NPC did not move'); bad++ }
+  if (sess().presented.table?.scene !== before) { console.log('  FAIL: an NPC dragged a screen'); bad++ }
+}
+
 console.log(bad===0 ? '\nPASS: players move themselves and nothing else' : `\nFAIL: ${bad}`)
 process.exit(bad===0?0:1)

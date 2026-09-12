@@ -31,7 +31,9 @@ export const IDENTITY = 'identity'
 export const HEALTH = 'health'
 /** A sink: content here has no public representation and never will. */
 export const DM_ONLY = 'dm'
-export const RESERVED_GROUPS = [PRESENCE, IDENTITY, HEALTH, DM_ONLY]
+/** A ring showing how far a creature can hit. Revealed like anything else. */
+export const REACH = 'reach'
+export const RESERVED_GROUPS = [PRESENCE, IDENTITY, HEALTH, REACH, DM_ONLY]
 
 export type RevealTarget = string
 export const target = (id: EntityId | PlacementId, group: Group = PRESENCE): RevealTarget =>
@@ -70,6 +72,8 @@ export interface TokenKindDef {
   hasSecrets: boolean
   /** Placements of this kind move together when the DM moves the party. */
   party: boolean
+  /** How far this kind can hit, in feet. Null draws no ring. */
+  reach: number | null
 }
 
 /* ---------------------------- actors ---------------------------- */
@@ -121,6 +125,8 @@ export interface Actor {
   kind: string
   name: string
   art: string | null
+  /** Overrides the kind's reach for this one creature. */
+  reach: number | null
   maxHp: number | null
   entries: Record<string, EntryContent>
   /** DM-only, and never projectable. */
@@ -187,13 +193,36 @@ export interface Check {
    hexes sets it false and keeps only the scale bar and the ruler, both
    calibrated to the same cell.
 ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   How big a cell is follows from what kind of map it is, rather than
+   being typed out per scene. Three values, so it cannot drift: a room
+   is paced in feet, a town in yards, a coastline in miles. Hand-writing
+   the unit is what left Phandalin claiming a hundred feet a square.
+------------------------------------------------------------------ */
+
+export type MapKind = 'location' | 'town' | 'region'
+
+export const MAP_SCALE: Record<MapKind, { unit: number; label: string }> = {
+  location: { unit: 5, label: 'ft' },
+  town: { unit: 5, label: 'yd' },
+  region: { unit: 5, label: 'mi' },
+}
+
+/** Feet in one of each label, so a reach in feet can be drawn on any of them. */
+const FEET: Record<string, number> = { ft: 1, yd: 3, mi: 5280 }
+
+
 export interface Grid {
   cols: number
-  /** Real-world size of one cell. */
+  /** Real-world size of one cell, derived from the scene's map kind. */
   unit: number
   label: string
   overlay: boolean
 }
+
+/** How many cells across a distance in feet reaches on this grid. */
+export const cellsForFeet = (grid: Grid, feet: number): number =>
+  feet / (grid.unit * (FEET[grid.label] ?? 1))
 
 export interface Pin { parent: SceneId; x: number; y: number }
 
@@ -202,7 +231,14 @@ export interface Prep { want: string; threat: string; wrong: string; notes: stri
 export interface Scene {
   id: SceneId
   name: string
+  /** A room, a settlement, or a stretch of country. Sets the grid scale. */
+  map: MapKind
+  /** The map the table plays on. */
   background: string | null
+  /** A picture of the place, for the sidebar. Not the map: the map is
+      played on, this is looked at, and a battle grid makes a poor
+      illustration of somewhere you have only heard about. */
+  art: string | null
   description: string
   entries: SceneEntry[]
   placements: PlacementDef[]
@@ -235,6 +271,9 @@ export interface Item {
   detail: string
   /** Never projectable. */
   secret: string
+  /** What it does, in the same shape a creature's block uses. Travels
+      with the item, so whoever holds it can read it. */
+  stats: StatBlock | null
   group: string
 }
 
@@ -261,7 +300,10 @@ export interface ClockEvent { at: number; playerText: string; dmText: string }
 export interface Clock {
   id: ClockId
   name: string
+  /** One line under the name, and the players read it too. */
   caption: string
+  /** DM-only, like an actor's note. Staging, not description. */
+  note: string | null
   max: number
   events: ClockEvent[]
 }
@@ -335,10 +377,11 @@ export const partyKinds = (ir: CampaignIR): string[] =>
   ir.tokenKinds.filter(k => k.party).map(k => k.id)
 
 export const DEFAULT_TOKEN_KINDS: {
-  id: string; label: string; shape: TokenShape; accent: string; party?: boolean
+  id: string; label: string; shape: TokenShape; accent: string
+  party?: boolean; reach?: number
 }[] = [
-  { id: 'pc', label: 'Player character', shape: 'shield', accent: '#64a9c9', party: true },
-  { id: 'npc', label: 'Person', shape: 'disc', accent: '#8f9bb0' },
-  { id: 'monster', label: 'Monster', shape: 'hex', accent: '#a2544c' },
+  { id: 'pc', label: 'Player character', shape: 'shield', accent: '#64a9c9', party: true, reach: 5 },
+  { id: 'npc', label: 'Person', shape: 'disc', accent: '#8f9bb0', reach: 5 },
+  { id: 'monster', label: 'Monster', shape: 'hex', accent: '#a2544c', reach: 5 },
   { id: 'object', label: 'Thing', shape: 'square', accent: '#8a8272' },
 ]
