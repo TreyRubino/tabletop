@@ -28,7 +28,7 @@ function makeProbe(assetRoot: string): AssetProbe {
   }
 }
 
-/** Reads campaign.json as text, for the store to hash and keep. */
+/** Reads campaign.json as text. */
 export function readCampaignSource(dir: string): { ok: true; json: string; file: string }
   | { ok: false; diagnostics: Diagnostic[]; source: string } {
   const root = resolve(dir)
@@ -40,7 +40,7 @@ export function readCampaignSource(dir: string): { ok: true; json: string; file:
   return { ok: true, json: readFileSync(file, 'utf8'), file }
 }
 
-/** Validates a source string that already came out of the store. */
+/** Validates a source string. */
 export function validateSource(dir: string, json: string): LoadResult {
   const root = resolve(dir)
   const assetRoot = join(root, 'assets')

@@ -1,15 +1,15 @@
 import { useState } from 'react'
-import { TABLE, type PublicScene } from '@tabletop/core'
+import type { PublicScene } from '@tabletop/core'
 import type { ShellState } from '../shell'
-import { Section, Card, Action, Find, Empty, NoMatch } from '../ui/kit'
+import { Card, Action, Find, Empty, NoMatch } from '../ui/kit'
 
 /* ------------------------------------------------------------------
-   Places. A place that contains places looks exactly like one that
+   Scenes. A scene that contains scenes looks exactly like one that
    does not — same card, with one extra control that opens what is
    inside rather than turning the row into a different kind of thing.
 
-   Depth-first and flat: the Stonehill Inn, then its upstairs, then
-   the next place. Nothing goes more than two disclosures deep.
+   Depth-first and flat: the session, then each of its parts, then
+   the next one. Nothing goes more than two disclosures deep.
 
    `Row` lives out here rather than inside the panel on purpose. A
    component declared inside another is a new function on every render,
@@ -22,19 +22,18 @@ import { Section, Card, Action, Find, Empty, NoMatch } from '../ui/kit'
 interface RowCtx {
   dm: ShellState['dm']
   presented: string | null
-  /** The place the sidebar is currently looking at. */
+  /** The scene the sidebar is currently looking at. */
   on: string | null
   setViewing: ShellState['setViewing']
-  setSelected: ShellState['setSelected']
   expanded: Set<string>
   toggle: (id: string) => void
   childrenOf: (id: string) => PublicScene[]
   countWithin: (id: string) => number
 }
 
-export function ScenesPanel({ world, dm, viewing, setViewing, setSelected }: ShellState) {
+export function ScenesPanel({ world, dm, viewing, setViewing }: ShellState) {
   const [q, setQ] = useState('')
-  /* Which places are showing what is inside them. Local and transient:
+  /* Which scenes are showing what is inside them. Local and transient:
      this is a glance, not a setting. */
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
@@ -48,7 +47,7 @@ export function ScenesPanel({ world, dm, viewing, setViewing, setSelected }: She
   const parentOf = (s: PublicScene): string | null =>
     s.trail.length > 1 ? s.trail[s.trail.length - 2].id : null
   const childrenOf = (id: string) => world.scenes.filter(x => parentOf(x) === id)
-  /* Everything under a place at any depth, counted but not flattened.
+  /* Everything under a scene at any depth, counted but not flattened.
      The count is what the "inside" button reports; the nesting is what
      it opens. */
   const countWithin = (id: string): number =>
@@ -59,7 +58,6 @@ export function ScenesPanel({ world, dm, viewing, setViewing, setSelected }: She
     presented: world.presented,
     on: viewing ?? world.presented,
     setViewing,
-    setSelected,
     expanded,
     toggle: id => setExpanded(prev => {
       const next = new Set(prev)
@@ -78,26 +76,19 @@ export function ScenesPanel({ world, dm, viewing, setViewing, setSelected }: She
 
   return (
     <div className="scenes">
-      {world.scenes.length > 6 && <Find what="a place" value={q} onChange={setQ} />}
+      {world.scenes.length > 6 && <Find what="a scene" value={q} onChange={setQ} />}
 
-      {shown.length === 0 && <NoMatch what="place" />}
+      {shown.length === 0 && <NoMatch what="scene" />}
 
-      {needle
-        ? shown.map(s => <Row key={s.id} s={s} ctx={ctx} />)
-        : roots.map(root => {
-          const places = childrenOf(root.id)
-          if (places.length === 0) return <Row key={root.id} s={root} ctx={ctx} />
-          return (
-            <Section key={root.id} id={`scene:${root.id}`}
-              label={root.name} count={places.length}>
-              {/* The root's own row. Its children are the rows below it,
-                  so it does not also carry an "inside" button — that
-                  would list every one of them a second time. */}
-              <Row s={root} ctx={ctx} listed />
-              {places.map(place => <Row key={place.id} s={place} ctx={ctx} />)}
-            </Section>
-          )
-        })}
+      {/* Every scene is a row, and a row that holds scenes carries the
+          "inside" button that opens them beneath it. Master wrapped a
+          top-level place in a section instead, because it had exactly
+          one — a whole region holding twenty places, which is a group
+          and reads as one. Here the top level is the night itself,
+          eight scenes in the order they happen, and a section around
+          three of them would be a heading over a list of one. The
+          disclosure is the same disclosure either way. */}
+      {(needle ? shown : roots).map(s => <Row key={s.id} s={s} ctx={ctx} />)}
     </div>
   )
 }
@@ -108,27 +99,20 @@ function Row({ s, listed, ctx }: {
   listed?: boolean
   ctx: RowCtx
 }) {
-  const { dm, presented: onScreen, on, setViewing, setSelected, expanded, toggle } = ctx
+  const { dm, presented: onScreen, on, setViewing, expanded, toggle } = ctx
 
-  /* Only what is directly inside. A cellar under a cellar opens from
-     the cellar, not from the building, so the tree on screen is the
+  /* Only what is directly inside. A part inside a part opens from
+     that part, not from the one above it, so the tree on screen is the
      tree in the campaign rather than a flattened pile of everything
-     below this door. */
+     below it. */
   const within = listed ? [] : ctx.childrenOf(s.id)
   const deep = listed ? 0 : ctx.countWithin(s.id)
   const openable = within.length > 0
   const isOpen = openable && expanded.has(s.id)
   const presented = s.id === onScreen
-  const here = dm
-    ? Object.values(dm.session.placements).filter(p => p.scene === s.id).length
-    : s.tokens.length
-
-  /* Every party token already standing here, so the button can go
-     quiet once there is nothing left for it to do. */
-  const partyKinds = new Set((dm?.ir.tokenKinds ?? []).filter(k => k.party).map(k => k.id))
-  const partyHere = !dm || Object.values(dm.session.placements)
-    .filter(p => partyKinds.has(dm.ir.actors.find(a => a.id === p.actor)?.kind ?? ''))
-    .every(p => p.scene === s.id)
+  /* The same slot the token count used to fill. A scene has one
+     number worth reporting and this is it. */
+  const here = s.images.length
 
   return (
     <>
@@ -137,7 +121,9 @@ function Row({ s, listed, ctx }: {
         tag={presented ? 'on screen' : undefined}
         tagTone="live"
         meta={<>
-          {here > 0 ? <><strong>{here}</strong> here</> : <>nobody here</>}
+          {here > 0
+            ? <><strong>{here}</strong> picture{here === 1 ? '' : 's'}</>
+            : <>no pictures</>}
           {' \u00b7 '}
           {openable
             ? <>
@@ -148,31 +134,21 @@ function Row({ s, listed, ctx }: {
         </>}
         body={s.description || undefined}
         active={s.id === on}
-        onOpen={() => { setViewing(s.id); setSelected(null) }}
+        onOpen={() => setViewing(s.id)}
         openTitle={`Look at ${s.name}`}
         acts={<>
           {dm && (
             <Action title="Put this on every screen" disabled={presented}
               onClick={() => {
-                dm.send({ t: 'present', audience: TABLE, scene: s.id as never })
+                dm.send({ t: 'present', scene: s.id as never })
                 dm.toast(`Everyone is now looking at ${s.name}`)
               }}>show</Action>
-          )}
-          {dm && (
-            <Action disabled={partyHere}
-              title={partyHere
-                ? 'The party is here'
-                : 'Move every party token here, show it, and reveal them standing in it'}
-              onClick={() => {
-                dm.send({ t: 'moveParty', scene: s.id as never })
-                dm.toast(`The party arrives at ${s.name}`)
-              }}>move the party</Action>
           )}
           {openable && (
             <Action end on={isOpen}
               title={isOpen
                 ? `Hide what is inside ${s.name}`
-                : `${within.length} place${within.length === 1 ? '' : 's'} directly inside ${s.name}`}
+                : `${within.length} scene${within.length === 1 ? '' : 's'} directly inside ${s.name}`}
               onClick={() => toggle(s.id)}>
               {isOpen ? 'hide inside' : `inside (${within.length})`}
             </Action>

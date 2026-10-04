@@ -8,7 +8,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 // the default is resolved from the repo root.
 const dir = process.argv[2]
   ? resolve(process.cwd(), process.argv[2])
-  : resolve(ROOT, process.env.CAMPAIGN ?? 'campaigns/icespire')
+  : resolve(ROOT, process.env.CAMPAIGN ?? 'campaigns/session-two')
 const r = loadCampaign(dir)
 
 if (!r.ok) {
@@ -24,5 +24,7 @@ if (warnings.length > 0) {
   console.warn(reportDiagnostics(warnings))
 }
 console.log(`\n  ${ir.title} \u2014 ok`)
-console.log(`  ${ir.scenes.length} scenes, ${ir.symbols.size} entities, `
-  + `${ir.audiences.length} audiences, ${ir.initialReveals.length} initial reveals\n`)
+const pictures = ir.scenes.reduce((n, s) => n + s.images.length, 0)
+const words = ir.scenes.reduce((n, s) =>
+  n + s.body.split(/\s+/).filter(Boolean).length, 0)
+console.log(`  ${ir.scenes.length} scenes, ${pictures} pictures, ${words} words\n`)

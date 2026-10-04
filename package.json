@@ -13,9 +13,7 @@
     "dev": "npm run build:core && concurrently -n server,web -c cyan,magenta --kill-others-on-fail \"npm -w @tabletop/server run dev\" \"npm -w @tabletop/web run dev\"",
     "check": "tsc -p packages/core --noEmit && tsc -p packages/server --noEmit && tsc -p packages/web --noEmit",
     "lint:campaign": "npm run build:core && node packages/server/dist/lint.js",
-    "test": "npm run build:core && tsc -p packages/server && node test/run.mjs",
-    "portraits:manifest": "node scripts/portraits.mjs manifest",
-    "portraits:fetch": "node scripts/portraits.mjs fetch"
+    "test": "npm run build:core && tsc -p packages/server && node test/run.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

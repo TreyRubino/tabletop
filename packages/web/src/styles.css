@@ -52,6 +52,12 @@
   /* ---- spacing. Four steps. ---- */
   /* Behind the map: darker than the app so a map edge reads as an edge. */
   --void: #06080b;
+  /* ---- line heights. Two for text, and two for things that are not
+     really text: a map pin and the banner. ---- */
+  --lh-tight: 1.35;
+  --lh-body: 1.5;
+  --lh-prose: 1.62;
+
   --r-xs: 3px;
   --g-1: 0.2rem;
   --g-2: 0.35rem;
@@ -61,6 +67,9 @@
      Reveals matrix needs the column room; the inspector matches so the
      two sides of the app are never a near-miss apart. */
   --side: 356px;
+  /* The reading column. Wider than the drawer: one holds cards,
+     the other holds the night's prose, and prose needs the room. */
+  --read: 560px;
   --r: 6px;
   --r-sm: 4px;
 }
@@ -73,7 +82,7 @@ body {
   color: var(--ink);
   font-family: var(--sans);
   font-size: 13.5px;
-  line-height: 1.5;
+  line-height: var(--lh-body);
   -webkit-font-smoothing: antialiased;
 }
 h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.012em; }
@@ -85,10 +94,10 @@ h3 {
 }
 h4 { font-size: var(--t-prose); }
 p { margin: 0 0 0.55rem; }
-.prose { font-family: var(--serif); line-height: 1.62; max-width: 62ch; }
-.hint, .empty { color: var(--ink-3); font-size: var(--t-body); line-height: 1.5; }
+.prose { font-family: var(--serif); line-height: var(--lh-prose); max-width: 62ch; }
+.hint, .empty { color: var(--ink-3); font-size: var(--t-body); line-height: var(--lh-body); }
 .truth {
-  font-size: var(--t-body); line-height: 1.62; color: var(--ink-2);
+  font-size: var(--t-body); line-height: var(--lh-prose); color: var(--ink-2);
   border-left: 2px solid var(--hidden); padding-left: 0.6rem; margin: 0.4rem 0 0.5rem;
 }
 /* One button. The metrics are the ones on a Places card, so anything
@@ -130,7 +139,7 @@ select:focus-visible, textarea:focus-visible, summary:focus-visible {
    and the one that destroys something.
 ------------------------------------------------------------------ */
 
-.act, .chip, .crumb, .tool, .stage-jump, .join-player, .matrix-col {
+.act, .chip, .crumb, .tool, .looking, .join-player, .matrix-col {
   flex: none; display: inline-flex; align-items: center; gap: var(--g-2);
   font: inherit; font-size: var(--t-ui); color: var(--ink-2);
   background: transparent; border: 0;
@@ -142,9 +151,9 @@ select:focus-visible, textarea:focus-visible, summary:focus-visible {
    these wears. */
 .act:hover:not(:disabled), .chip:hover:not(:disabled),
 .crumb:not(:disabled):hover, .tool:hover:not(:disabled),
-.stage-jump:hover, .join-player:hover, .matrix-col:hover,
+.join-player:hover, .matrix-col:hover,
 
-.act.is-on, .chip.is-on, .tool.is-on, .stage-jump.is-on,
+.act.is-on, .chip.is-on, .tool.is-on,
 .rail-btn.is-on, .matrix-col.is-on { color: var(--accent); }
 .act.is-danger:hover:not(:disabled) { color: var(--bad); }
 /* The odd one out on a row: what a card opens rather than what it does. */
@@ -154,7 +163,7 @@ input[type="text"], textarea, select, .search {
   border: 1px solid var(--line); border-radius: var(--r-sm);
   color: var(--ink); padding: 0.4rem 0.55rem; width: 100%;
 }
-textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
+textarea { resize: vertical; font-family: var(--sans); line-height: var(--lh-body); }
 ::placeholder { color: var(--ink-3); }
 .row { display: flex; gap: var(--g-2); align-items: center; flex-wrap: wrap; }
 /* A place to type, labelled the way a card labels its context line. */
@@ -299,7 +308,7 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 .shell {
   display: grid;
   min-height: 0;
-  grid-template-columns: var(--rail) minmax(0, 1fr) var(--side);
+  grid-template-columns: var(--rail) minmax(0, 1fr) var(--read);
   height: 100%; position: relative; background: var(--bg);
 }
 .rail {
@@ -355,9 +364,10 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   border-bottom: 1px solid var(--line);
 }
 .trail { display: flex; align-items: center; gap: var(--g-2); flex-wrap: wrap; min-height: 1.7rem; }
-.crumb:disabled, .crumb.is-on { color: var(--ink); opacity: 1; font-weight: 600; }
+.crumb:disabled, .act.crumb.is-on { color: var(--ink); opacity: 1; font-weight: 600; }
 .crumb-sep { color: var(--ink-3); font-size: var(--t-ui); }
 .tools { display: flex; gap: var(--g-2); align-items: center; }
+.canvas-head-gap { flex: 1 1 auto; min-width: 0; }
 .tool.is-on:disabled { opacity: 1; }
 /* Both top-bar actions read identically: quiet with a hover highlight
    while there is something to do, and lit but inert once it is done. */
@@ -394,7 +404,7 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   border-left: 3px solid var(--accent); background: var(--accent-soft);
   border-radius: 0 var(--r) var(--r) 0;
 }
-.read p { font-family: var(--serif); line-height: 1.62; margin: 0; font-size: var(--t-read); }
+.read p { font-family: var(--serif); line-height: var(--lh-prose); margin: 0; font-size: var(--t-read); }
 .read cite {
   display: block; font-style: normal; font-size: var(--t-label);
   color: var(--accent); margin-bottom: 0.3rem;
@@ -410,11 +420,11 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 .affordances { background: var(--s2); border-radius: var(--r); padding: 0.6rem 0.75rem; }
 .affordances h3 { margin-bottom: 0.3rem; }
 .affordances ul { margin: 0; padding-left: 1.05rem; display: flex; flex-direction: column; gap: var(--g-1); }
-.affordances li { font-size: var(--t-prose); line-height: 1.5; color: var(--ink); }
+.affordances li { font-size: var(--t-prose); line-height: var(--lh-body); color: var(--ink); }
 .cues { display: flex; flex-direction: column; gap: var(--g-3); }
 .cue { border-left: 2px solid var(--hidden-soft); padding-left: 0.6rem; }
 .cue-when { display: block; font-size: var(--t-label); color: var(--ink-3); margin-bottom: 0.1rem; }
-.cue p { margin: 0; font-size: var(--t-body); line-height: 1.5; color: var(--ink-2); }
+.cue p { margin: 0; font-size: var(--t-body); line-height: var(--lh-body); color: var(--ink-2); }
 /* What you say when they miss, dimmer than what you say when they hit. */
 .check-miss { color: var(--ink-3); }
 .narration {
@@ -425,7 +435,7 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 .narration button { align-self: flex-start; }
 .prep { margin: 0.2rem 0 0; display: flex; flex-direction: column; gap: var(--g-3); }
 .prep dt { color: var(--ink-3); font-size: var(--t-label); }
-.prep dd { margin: 0.08rem 0 0; font-family: var(--serif); line-height: 1.5; }
+.prep dd { margin: 0.08rem 0 0; font-family: var(--serif); line-height: var(--lh-body); }
 .prep dd.is-blank { color: var(--hidden); font-style: italic; opacity: 0.7; }
 /* ---------------------------- panels ---------------------------- */
 
@@ -461,8 +471,13 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   background: transparent; padding: 0;
 }
 .matrix-name .card-acts { flex: none; margin-left: auto; }
-.matrix-title { font-size: var(--t-strong); font-weight: 600; line-height: 1.35; text-align: left; }
-.matrix-detail { font-size: var(--t-label); color: var(--ink-3); }
+.matrix-title { font-size: var(--t-strong); font-weight: 600; line-height: var(--lh-tight); text-align: left; }
+/* A row's second line: what it is, or what a roll tells them. One rule,
+   because they are the same kind of text in the same place. */
+.matrix-detail {
+  display: block; margin-top: var(--g-1);
+  font-size: var(--t-label); color: var(--ink-3); white-space: normal;
+}
 .matrix-group { display: flex; align-items: center; justify-content: space-between; padding: 1px 0; }
 .matrix-group-name { font-size: var(--t-label); color: var(--ink-3); }
 .cell {
@@ -481,16 +496,18 @@ textarea { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 .track span.is-filled { background: var(--accent); }
 .stage-map { margin-top: 0.5rem; }
 .stage-map summary { font-size: var(--t-label); color: var(--ink-3); cursor: pointer; }
-.stage-jump { display: flex; width: 100%; text-align: left; margin-top: 2px; }
+/* The three named footprints. Colour, hover and chosen state come
+   from .act and .sheen; only the shape lives here. */
+.act.row { display: flex; width: 100%; text-align: left; margin-top: 2px; }
 .stage-id { color: var(--ink-3); min-width: 5rem; }
-.stage-text { color: inherit; line-height: 1.5; }
-.stage-jump.is-on .stage-text { color: var(--ink); }
+.stage-text { color: inherit; line-height: var(--lh-body); }
+.act.row.is-on .stage-text { color: var(--ink); }
 .item-detail { color: var(--ink-2); }
 .whisper {
   margin: 0; padding: 0.7rem 0.85rem; background: var(--accent-soft);
   border-left: 3px solid var(--accent); border-radius: 0 var(--r) var(--r) 0;
 }
-.whisper p { font-family: var(--serif); font-size: var(--t-read); line-height: 1.62; margin: 0; }
+.whisper p { font-family: var(--serif); font-size: var(--t-read); line-height: var(--lh-prose); margin: 0; }
 /* ---------------------------- overlays ---------------------------- */
 
 .banner {
@@ -553,7 +570,7 @@ kbd {
   font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
   margin-bottom: 0.3rem;
 }
-.toast.is-note p { margin: 0 0 0.6rem; font-size: var(--t-prose); line-height: 1.5; }
+.toast.is-note p { margin: 0 0 0.6rem; font-size: var(--t-prose); line-height: var(--lh-body); }
 .toast.is-note .row { gap: var(--g-2); }
 /* ---------------------------- stat blocks ---------------------------- */
 
@@ -580,13 +597,13 @@ kbd {
 .sb-meta { margin: 0; display: flex; flex-direction: column; gap: var(--g-1); }
 .sb-meta div { display: grid; grid-template-columns: 5.2rem 1fr; gap: var(--g-3); }
 .sb-meta dt { font-size: var(--t-label); color: var(--ink-3); margin: 0; }
-.sb-meta dd { margin: 0; font-size: var(--t-body); line-height: 1.5; }
+.sb-meta dd { margin: 0; font-size: var(--t-body); line-height: var(--lh-body); }
 .sb-section { border-top: 1px solid var(--line); padding-top: 0.45rem; }
 .sb-section h4 {
   margin-bottom: 0.3rem;
   letter-spacing: 0.02em;
  font-size: var(--t-label); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.07em; }
-.sb-section p { font-size: var(--t-body); line-height: 1.5; margin: 0 0 0.35rem; color: var(--ink-2); }
+.sb-section p { font-size: var(--t-body); line-height: var(--lh-body); margin: 0 0 0.35rem; color: var(--ink-2); }
 .sb-section p:last-child { margin-bottom: 0; }
 .sb-section strong { color: var(--ink); font-weight: 600; }
 /* ---------------------------- notifications ----------------------------
@@ -873,7 +890,7 @@ kbd {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .card-meta {
-  margin: 0; font-size: var(--t-label); line-height: 1.35; color: var(--ink-3);
+  margin: 0; font-size: var(--t-label); line-height: var(--lh-tight); color: var(--ink-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .card-meta strong { color: var(--ink-2); font-weight: 600; }
@@ -895,3 +912,91 @@ kbd {
   display: flex; flex-direction: column; gap: var(--g-2);
 }
 .sect-body > .card + .card { margin-top: 0.4rem; }
+
+.matrix-says {
+  display: block; margin-top: var(--g-1);
+  font-size: var(--t-strong); line-height: var(--lh-body);
+  color: var(--ink); white-space: normal; text-align: left;
+}
+/* ---------------------------- the stage ----------------------------
+   One picture, whole, centred. The stage used to size a box to the
+   image's aspect by hand because tokens and pins had to live in the
+   same coordinate space; nothing stands on a picture any more, so
+   object-fit does the whole job. */
+
+.stage-fit {
+  width: 100%; height: 100%; object-fit: contain; object-position: center;
+  user-select: none; pointer-events: none;
+}
+
+/* ------------------------------------------------------------------
+   The drawer takes a column; it does not float over the picture.
+
+   Overlaying was right for a map: pushing the canvas would reflow the
+   ground under the cursor every time a panel opened. There is no map
+   now. There is one photograph, it is the whole point of the screen,
+   and a panel lying across its left third makes it look cropped —
+   because it is, by the panel. So while a panel is open the shell
+   grows a column for it and the picture gets exactly what is left.
+------------------------------------------------------------------ */
+.shell.is-dm.is-drawered {
+  grid-template-columns: var(--rail) var(--side) minmax(0, 1fr);
+}
+.shell.is-drawered .drawer {
+  position: static; width: auto; inset: auto;
+  /* A grid item's default min-height is its content, so a long scene
+     list would stretch the row past the window and take the picture
+     with it. */
+  min-height: 0; height: 100%;
+}
+
+/* A player has no rail and no drawer, so the shell closes up: the
+   picture takes the room the console was using. */
+/* The reading column is hidden and a player has no rail either, so
+   the picture gets the whole window on both screens. */
+.shell.is-dm { grid-template-columns: var(--rail) minmax(0, 1fr); }
+.shell.is-player { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------------------------- campaign markdown ----------------------------
+   A scene's body is the markdown it was authored in, rendered whole in
+   the reading column. It is a document, so it is set like one: one
+   measure, one rhythm, and the type scale the rest of the app already
+   uses. Nothing above this line changes. */
+
+.md { display: flex; flex-direction: column; gap: var(--g-3); min-width: 0; }
+.md-p {
+  font-size: var(--t-read); line-height: var(--lh-prose); color: var(--ink-1);
+  margin: 0; overflow-wrap: break-word;
+}
+.md-head {
+  font-size: var(--t-label); font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-3);
+  margin: var(--g-4) 0 0;
+}
+.md-rule { border: 0; border-top: 1px solid var(--line); margin: var(--g-4) 0; width: 100%; }
+
+.md-table {
+  width: 100%; border-collapse: collapse; margin: var(--g-2) 0;
+  font-size: var(--t-body);
+}
+.md-table th {
+  text-align: left; font-size: var(--t-label); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-3); padding: 0.3rem 0.6rem 0.3rem 0;
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.md-table td {
+  padding: 0.34rem 0.6rem 0.34rem 0; vertical-align: top;
+  border-bottom: 1px solid var(--line); color: var(--ink-2);
+}
+.md-table tr:last-child td { border-bottom: 0; }
+.md-table td:first-child, .md-table th:first-child { padding-left: 0; }
+.md-table td:last-child, .md-table th:last-child { padding-right: 0; }
+
+/* The DM's note wears .truth exactly: same amber, same rule, same
+   metrics. Amber means "the players cannot see this" everywhere else
+   in the app and it means the same thing here. */
+.md-aside {
+  font-size: var(--t-body); line-height: var(--lh-prose); color: var(--ink-2);
+  border-left: 2px solid var(--hidden); padding-left: 0.6rem; margin: 0;
+}

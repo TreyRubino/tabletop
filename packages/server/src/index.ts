@@ -5,11 +5,9 @@ import { extname, join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
 import { WebSocketServer, type WebSocket } from 'ws'
-import type { ClientMsg, ServerMsg, AudienceId } from '@tabletop/core'
-import { TABLE } from '@tabletop/core'
+import type { ClientMsg, ServerMsg } from '@tabletop/core'
 import { readCampaignSource, validateSource, resolveAsset, reportDiagnostics } from './load.js'
 import { Room, type Client } from './room.js'
-import { Store } from './store.js'
 
 /* npm workspaces run scripts with cwd set to the package directory, so
    process.cwd() is not the repo root and cannot be used to find campaigns
@@ -20,11 +18,9 @@ import { Store } from './store.js'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
 const PORT = Number(process.env.PORT ?? 8080)
-const CAMPAIGN = resolve(ROOT, process.env.CAMPAIGN ?? 'campaigns/icespire')
+const CAMPAIGN = resolve(ROOT, process.env.CAMPAIGN ?? 'campaigns/session-two')
 const ROOM_CODE = (process.env.ROOM ?? 'table').toLowerCase()
 const DM_KEY = process.env.DM_KEY ?? randomBytes(4).toString('hex')
-
-const DB = resolve(ROOT, process.env.DB ?? 'data/tabletop.db')
 
 const src = readCampaignSource(CAMPAIGN)
 if (!src.ok) {
@@ -48,9 +44,7 @@ if (warnings.length > 0) {
   console.warn(reportDiagnostics(warnings))
 }
 
-const store = new Store(DB)
-const sync = store.syncCampaign(ir.id, src.json)
-const room = new Room(ir, store)
+const room = new Room(ir)
 
 /* ---------------------------- http ---------------------------- */
 
@@ -135,16 +129,7 @@ wss.on('connection', (ws: WebSocket) => {
         ws.close()
         return
       }
-      let audience: AudienceId = TABLE
-      if (msg.role === 'personal') {
-        if (!msg.audience || !room.knownAudience(msg.audience)) {
-          send({ t: 'denied', reason: 'unknown player' })
-          ws.close()
-          return
-        }
-        audience = msg.audience as AudienceId
-      }
-      client = room.join(msg.role, audience, send)
+      client = room.join(msg.role === 'dm' ? 'dm' : 'player', send)
       return
     }
 
@@ -170,14 +155,15 @@ http.listen(PORT, () => {
   const lan = nets[0]?.address ?? 'localhost'
 
   console.log(`\n  ${ir.title}`)
-  console.log(`  ${ir.scenes.length} scenes · ${ir.actors.length} actors · ${ir.items.length} items `
-    + `· ${ir.quests.length} quests · ${ir.clocks.length} clocks`)
-  console.log(`  db ${DB} · revision ${sync.revision}`
-    + `${sync.reimported ? ' (re-imported, session kept)' : ''}`
-    + ` · ${room.logLength} commands replayed\n`)
+  const pictures = ir.scenes.reduce((n, s) => n + s.images.length, 0)
+  console.log(`  ${ir.scenes.length} scenes · ${pictures} pictures`)
+  /* What it opens on, by name and by file. One line, and it settles
+     the only question worth asking when a screen looks wrong: is this
+     the campaign I think it is. */
+  const first = ir.scenes.find(s => s.id === ir.rootScene)
+  console.log(`  opens on  ${first?.name ?? '?'}  ·  ${first?.images[0]?.file ?? 'no picture'}`)
   console.log(`  DM        http://localhost:5173/#dm?room=${ROOM_CODE}&key=${DM_KEY}`)
-  console.log(`  Table     http://localhost:5173/#table?room=${ROOM_CODE}`)
-  console.log(`  Players   http://${lan}:5173/#join?room=${ROOM_CODE}\n`)
+  console.log(`  Players   http://${lan}:5173/#play?room=${ROOM_CODE}\n`)
   console.log(`  room code   ${ROOM_CODE}`)
   console.log(`  DM key      ${DM_KEY}\n`)
 })

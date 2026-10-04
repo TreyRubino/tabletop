@@ -1,40 +1,27 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import {
-  deserialiseIR,
-  type ClientMsg, type ServerMsg, type Command,
-  type CampaignIR, type SessionState, type World,
-} from '@tabletop/core'
+import type { ClientMsg, ServerMsg, Command, World } from '@tabletop/core'
 
-export type Role = 'dm' | 'table' | 'personal'
+export type Role = 'dm' | 'player'
 
 export interface Connection {
   status: 'connecting' | 'open' | 'denied' | 'closed'
   reason: string | null
-  /** DM only: authoritative state. */
-  dm: { ir: CampaignIR; session: SessionState; logLength: number } | null
-  /** Table and personal: the projection, and nothing else. */
   world: World | null
-  audiences: { id: string; name: string; personal: boolean }[]
-  /** Campaign title and lobby art, known before joining anything. */
-  campaign: { title: string; lobby: string | null } | null
+  /** How many commands are behind us, so the DM's undo can say so. */
+  logLength: number
   send(cmd: Command): void
   undo(): void
 }
 
-export function useConnection(
-  join: Extract<ClientMsg, { t: 'join' }> | null,
-): Connection {
+export function useConnection(join: Extract<ClientMsg, { t: 'join' }>): Connection {
   const [status, setStatus] = useState<Connection['status']>('connecting')
   const [reason, setReason] = useState<string | null>(null)
-  const [dm, setDm] = useState<Connection['dm']>(null)
   const [world, setWorld] = useState<World | null>(null)
-  const [audiences, setAudiences] = useState<Connection['audiences']>([])
-  const [campaign, setCampaign] = useState<Connection['campaign']>(null)
+  const [logLength, setLogLength] = useState(0)
   const ws = useRef<WebSocket | null>(null)
   const seq = useRef(0)
 
   useEffect(() => {
-    if (!join) return
     let closed = false
     let retry: number | undefined
 
@@ -49,34 +36,23 @@ export function useConnection(
         setReason(null)
         socket.send(JSON.stringify(join))
         // A laptop that slept and woke asks for whatever it missed.
-        if (seq.current > 0) {
-          socket.send(JSON.stringify({ t: 'resync', seq: seq.current } satisfies ClientMsg))
-        }
+        if (seq.current > 0) socket.send(JSON.stringify({ t: 'resync' } satisfies ClientMsg))
       }
 
       socket.onmessage = e => {
         const msg = JSON.parse(String(e.data)) as ServerMsg
         switch (msg.t) {
           case 'joined':
-            setAudiences(msg.audiences)
-            setCampaign({ title: msg.title, lobby: msg.lobby })
             break
           case 'denied':
             setStatus('denied')
             setReason(msg.reason)
             closed = true
             break
-          case 'dm':
+          case 'world':
             seq.current = msg.seq
-            setDm({
-              ir: deserialiseIR(msg.ir),
-              session: msg.session,
-              logLength: msg.logLength,
-            })
-            break
-          case 'update':
-            seq.current = msg.update.seq
-            setWorld(msg.update.world)
+            setWorld(msg.world)
+            setLogLength(msg.logLength)
             break
           case 'error':
             setReason(msg.message)
@@ -109,15 +85,15 @@ export function useConnection(
       && ws.current.send(JSON.stringify({ t: 'undo' } satisfies ClientMsg))
   }, [])
 
-  return { status, reason, dm, world, audiences, campaign, send, undo }
+  return { status, reason, world, logLength, send, undo }
 }
 
-/** Hash routing: #dm?room=x&key=y, #table?room=x, #join?room=x */
+/** Hash routing: #dm?room=x&key=y for the DM, anything else is a player. */
 export function useRoute() {
   const parse = () => {
     const h = location.hash.replace(/^#/, '')
     const [path, qs] = h.split('?')
-    return { path: path || 'join', params: new URLSearchParams(qs ?? '') }
+    return { path: path || 'play', params: new URLSearchParams(qs ?? '') }
   }
   const [route, setRoute] = useState(parse)
   useEffect(() => {

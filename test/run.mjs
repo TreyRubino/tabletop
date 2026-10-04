@@ -7,9 +7,9 @@ import { spawn } from 'node:child_process'
 import { rmSync } from 'node:fs'
 
 /* Pure functions, no server needed. */
-const OFFLINE = ['test/zoom.mjs']
+const OFFLINE = []
 
-const FILES = ['test/projection.mjs', 'test/statblocks.mjs', 'test/clocks.mjs', 'test/authority.mjs']
+const FILES = ['test/session.mjs']
 
 const scrub = db => [db, `${db}-wal`, `${db}-shm`]
   .forEach(p => { try { rmSync(p, { force: true }) } catch {} })

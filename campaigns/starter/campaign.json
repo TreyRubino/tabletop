@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 5,
+  "id": "starter",
+  "title": "A Blank Night",
+  "//": "A scene is a name, some pictures and a body of markdown. Drop image files into this folder's assets/ directory and name them in `images`; the sidebar shows one chip per picture and the DM taps between them while reading. `scenes` nests: a top-level scene holds its parts. `body` is rendered as markdown \u2014 headings, tables, blockquotes, bold and italic.",
+  "rootScene": "opening",
+  "scenes": [
+    {
+      "id": "opening",
+      "name": "Opening",
+      "description": "The first thing on screen. Replace all of this.",
+      "images": [],
+      "scenes": [
+        {
+          "id": "opening-inside",
+          "name": "Somewhere inside it",
+          "description": "A nested scene. It opens from the card above.",
+          "images": [],
+          "body": "Scenes nest as deeply as you like. The sidebar shows the top level, and each card opens what is directly inside it."
+        }
+      ],
+      "body": "#### Read this out\n\nThis is read-aloud text. It is boxed, and it is set at the largest reading size in the app, because it is the part you say out loud while the picture beside it is up.\n\n#### A note to yourself\n\nA plain entry sits under the read-aloud in the right-hand column. Use it for anything you want beside you while you read: a reminder, a name, a line you might need."
+    },
+    {
+      "id": "second",
+      "name": "The next one",
+      "description": "Scenes run in the order you write them.",
+      "images": [],
+      "body": "Put a picture on each scene and the chips appear on its card. Tapping one puts it on every screen in the room at once."
+    }
+  ]
+}

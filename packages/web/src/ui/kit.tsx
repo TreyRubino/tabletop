@@ -143,7 +143,7 @@ export function Acts({ children }: { children: ReactNode }) {
 ------------------------------------------------------------------ */
 
 export function Action({
-  children, onClick, disabled, title, on, danger, end, stop = true,
+  children, onClick, disabled, title, on, danger, end, look, stop = true,
 }: {
   children: ReactNode
   onClick?: () => void
@@ -153,12 +153,17 @@ export function Action({
   danger?: boolean
   /** Pushed to the far end of its row, away from the acts beside it. */
   end?: boolean
+  /* A named footprint for the handful of places a button is not a card
+     control: a step in the breadcrumb trail, a tool in the top bar, a
+     full-width row in a list. Colour, hover and chosen state stay the
+     same — only the shape differs, and only these three shapes exist. */
+  look?: 'crumb' | 'row'
   /** Cards open on click, so controls inside one stop the event. */
   stop?: boolean
 }) {
   return (
     <button
-      className={['act', sheen(on), danger ? 'is-danger' : '', end ? 'is-end' : '']
+      className={['act', sheen(on), danger ? 'is-danger' : '', end ? 'is-end' : '', look ?? '']
         .filter(Boolean).join(' ')}
       disabled={disabled} title={title}
       onClick={e => { if (stop) e.stopPropagation(); onClick?.() }}>
