@@ -52,7 +52,7 @@ export function Section({
 
   return (
     <section className={`sect ${open ? 'is-open' : ''} ${tone === 'hidden' ? 'is-hidden-group' : ''}`}>
-      <button className="sect-head" onClick={toggle} aria-expanded={open}>
+      <button className="sect-head sheen" onClick={toggle} aria-expanded={open}>
         <svg className="sect-caret" viewBox="0 0 24 24" width="11" height="11" aria-hidden
           fill="none" stroke="currentColor" strokeWidth="2.6"
           strokeLinecap="round" strokeLinejoin="round">

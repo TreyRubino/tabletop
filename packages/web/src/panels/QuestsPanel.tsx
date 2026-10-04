@@ -2,14 +2,23 @@ import { useState } from 'react'
 import { TABLE, target, type EntityId } from '@tabletop/core'
 import { isDM } from '../shell'
 import type { ShellState } from '../shell'
-import { Section } from '../ui/Section'
+import { Card, Action, Find, Empty, NoMatch } from '../ui/kit'
 
-/* Stages form a graph. The DM advances by choosing a branch, so what
-   the players are told and what actually happens stay in step. */
+/* ------------------------------------------------------------------
+   Stages form a graph. The DM advances by choosing a branch, so what
+   the players are told and what actually happens stay in step.
 
-export function QuestsPanel({ world, dm }: ShellState) {
+   A quest is a Card: its name, whether the table can see it, where it
+   stands in its own graph, the words the players have been given, and
+   the DM's truth underneath. The branches are its controls; the whole
+   graph folds away beneath them.
+------------------------------------------------------------------ */
+
+export function QuestsPanel({ world, dm, selectedQuest, setSelectedQuest }: ShellState) {
   const [q, setQ] = useState('')
-  if (world.quests.length === 0) return <p className="empty">Nothing yet. Go and find something.</p>
+  if (world.quests.length === 0) {
+    return <Empty>Nothing yet. Go and find something.</Empty>
+  }
   const secrets = isDM(world) ? world.secrets : null
 
   const needle = q.trim().toLowerCase()
@@ -20,66 +29,80 @@ export function QuestsPanel({ world, dm }: ShellState) {
 
   return (
     <div className="quests">
-      <div className="panel-sticky">
-        <input className="search" type="text" value={q} placeholder="Find a quest"
-          onChange={e => setQ(e.target.value)} />
-      </div>
+      <Find what="a quest" value={q} onChange={setQ} />
 
-      {shown.length === 0 && <p className="empty">Nothing matches.</p>}
+      {shown.length === 0 && <NoMatch what="quest" />}
 
-      {shown.map(q => {
-        const known = !dm || (dm.session.reveals[TABLE] ?? []).includes(target(q.id as EntityId))
-        const sec = secrets?.quests[q.id]
+      {shown.map(quest => {
+        const known = !dm
+          || (dm.session.reveals[TABLE] ?? []).includes(target(quest.id as EntityId))
+        const sec = secrets?.quests[quest.id]
+        const step = sec ? sec.allStages.findIndex(s => s.id === quest.stageId) + 1 : 0
+        const ways = sec?.options.length ?? 0
+
         return (
-          <Section key={q.id} id={`quest:${q.id}`} label={q.title}
-            tone={known ? undefined : 'hidden'}>
-            <header>
-              {dm && (
-                <button className="ghost" onClick={() => dm.send(known
-                  ? { t: 'conceal', audience: TABLE, targets: [target(q.id as EntityId), target(q.id as EntityId, 'stage')] }
-                  : { t: 'reveal', audience: TABLE, targets: [target(q.id as EntityId), target(q.id as EntityId, 'stage')] })}>
-                  {known ? 'hide' : 'show'}
-                </button>
-              )}
-            </header>
-            {q.stageText && <p className="prose">{q.stageText}</p>}
-            {sec?.dmText && <p className="truth">{sec.dmText}</p>}
-
-            {dm && sec && (
-              <>
-                {sec.options.length > 0 ? (
-                  <div className="branches">
-                    <span className="branch-label">What happens next</span>
-                    {sec.options.map(o => (
-                      <button key={o.goto} className="branch"
-                        onClick={() => {
-                          dm.send({ t: 'questStage', quest: q.id as never, stage: o.goto })
-                          dm.toast(`${q.title}: ${o.label}`)
-                        }}>
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="hint">This quest ends here.</p>
-                )}
-
-                {/* The whole graph, so the DM can see where a branch leads
-                    and jump back if the table went somewhere unexpected. */}
-                <details className="stage-map">
-                  <summary>all {sec.stageCount} steps</summary>
-                  {sec.allStages.map(st => (
-                    <button key={st.id}
-                      className={`stage-jump ${st.id === q.stageId ? 'is-here' : ''}`}
-                      onClick={() => dm.send({ t: 'questStage', quest: q.id as never, stage: st.id })}>
-                      <span className="stage-id">{st.id}</span>
-                      <span className="stage-text">{st.playerText}</span>
-                    </button>
-                  ))}
-                </details>
+          <Card key={quest.id}
+            title={quest.title}
+            tag={known ? undefined : 'players cannot see it'}
+            tagTone="hidden"
+            meta={sec
+              ? <>
+                step <strong>{step || 1}</strong> of <strong>{sec.stageCount}</strong>
+                {' \u00b7 '}
+                {ways > 0
+                  ? <><strong>{ways}</strong> way{ways === 1 ? '' : 's'} forward</>
+                  : <>ends here</>}
               </>
+              : <>on your list{' \u00b7 '}shared with the table</>}
+            body={quest.stageText || undefined}
+            hidden={!known}
+            active={selectedQuest === quest.id}
+            onOpen={() => setSelectedQuest(quest.id)}
+            openTitle={`Read ${quest.title}`}
+            acts={dm ? <>
+              <Action on={known} onClick={() => {
+                const targets = [
+                  target(quest.id as EntityId),
+                  target(quest.id as EntityId, 'stage'),
+                ]
+                dm.send(known
+                  ? { t: 'conceal', audience: TABLE, targets }
+                  : { t: 'reveal', audience: TABLE, targets })
+                dm.toast(known
+                  ? `${quest.title} hidden from the table`
+                  : `${quest.title} is now on every screen`)
+              }}>{known ? 'on every screen' : 'show'}</Action>
+
+              {sec?.options.map(o => (
+                <Action key={o.goto}
+                  title={`Advance ${quest.title}`}
+                  onClick={() => {
+                    dm.send({ t: 'questStage', quest: quest.id as never, stage: o.goto })
+                    dm.toast(`${quest.title}: ${o.label}`)
+                  }}>
+                  {o.label}
+                </Action>
+              ))}
+            </> : undefined}>
+
+            {/* The whole graph, so the DM can see where a branch leads
+                and jump back if the table went somewhere unexpected. */}
+            {dm && sec && (
+              <details className="stage-map">
+                <summary>all {sec.stageCount} steps</summary>
+                {sec.allStages.map(st => (
+                  <Action key={st.id} look="row" on={st.id === quest.stageId}
+                    title={`Jump ${quest.title} to this step`}
+                    onClick={() => dm.send({
+                      t: 'questStage', quest: quest.id as never, stage: st.id,
+                    })}>
+                    <span className="stage-id">{st.id}</span>
+                    <span className="stage-text">{st.playerText}</span>
+                  </Action>
+                ))}
+              </details>
             )}
-          </Section>
+          </Card>
         )
       })}
     </div>

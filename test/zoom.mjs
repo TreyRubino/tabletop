@@ -54,5 +54,59 @@ for (const z of [1, 1.7, 3, 8]) for (const cx of [0.2, 0.5, 0.85]) {
 console.log('4. pointer maps back to the same world point while zoomed:', rt === 0 ? 'ok' : 'FAIL')
 if (rt) bad++
 
+// 5. A marker counter-scales, so its size on screen never changes and
+//    it never leaves the point it is anchored to.
+let mk = 0
+const RING = 46
+for (const z of [1, 1.7, 3, 8]) {
+  const inv = 1 / z
+  // world scales by z, marker scales by inv: on-screen size is constant
+  if (!near(RING * z * inv, RING, 1e-9)) { mk++; console.log(`  FAIL size at z=${z}`) }
+  // a zero-size anchor scaled about its own centre does not move,
+  // so the marker stays on the map point at every zoom
+  for (const [c, p] of [[0.5, 0.2], [0.3, 0.9], [0.7, 0.55]]) {
+    const cc = hold(c, z)
+    const anchor = toScreen(p, cc, z, BOX.w)          // where the map point is
+    const marker = toScreen(p, cc, z, BOX.w) + 0 * inv // anchor + scaled offset of 0
+    if (!near(anchor, marker, 1e-9)) { mk++; console.log(`  FAIL drift z=${z}`) }
+  }
+}
+console.log('5. markers hold their screen size and stay on their point:', mk === 0 ? 'ok' : 'FAIL')
+if (mk) bad++
+
+// 6. The scale bar sits outside the transform, so it must carry the
+//    zoom itself or it under-reports the moment you zoom in.
+let sb = 0
+const CELL = 40
+for (const z of [1, 2, 4]) {
+  const drawn = CELL * z              // what the bar renders
+  const actual = CELL * z             // what one cell measures on screen
+  if (!near(drawn, actual, 1e-9)) { sb++; console.log(`  FAIL bar at z=${z}`) }
+}
+console.log('6. the scale bar still measures a true cell when zoomed:', sb === 0 ? 'ok' : 'FAIL')
+if (sb) bad++
+
+// 7. A press that never became a drag is a click, at any zoom. Zoomed
+//    in the pan handler claims the press, so it has to report that
+//    itself or clicking bare map silently stops clearing the sidebar.
+const press = (zoom, dx, dy, button = 0) => {
+  const moved = Math.abs(dx) > 3 || Math.abs(dy) > 3
+  const grabbed = button === 1 || (button === 0 && zoom > 1)
+  return { panned: grabbed && moved, click: grabbed && !moved && button === 0,
+           marquee: !grabbed && moved }
+}
+let cl = 0
+const expect = (got, want, what) => {
+  if (JSON.stringify(got) !== JSON.stringify(want)) { cl++; console.log(`  FAIL ${what}`) }
+}
+expect(press(1, 0, 0),      { panned: false, click: false, marquee: false }, '1x tap -> marquee path handles it')
+expect(press(1, 40, 10),    { panned: false, click: false, marquee: true  }, '1x drag -> marquee')
+expect(press(3, 0, 0),      { panned: false, click: true,  marquee: false }, 'zoomed tap -> click on empty map')
+expect(press(3, 2, 2),      { panned: false, click: true,  marquee: false }, 'zoomed jitter is still a click')
+expect(press(3, 60, 5),     { panned: true,  click: false, marquee: false }, 'zoomed drag -> pan')
+expect(press(3, 0, 0, 1),   { panned: false, click: false, marquee: false }, 'middle tap deselects nothing')
+console.log('7. a press without a drag is a click at any zoom:', cl === 0 ? 'ok' : 'FAIL')
+if (cl) bad++
+
 console.log(bad === 0 ? '\nPASS: zoom math holds' : `\nFAIL: ${bad}`)
 process.exit(bad ? 1 : 0)

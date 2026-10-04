@@ -4,7 +4,8 @@ import { project, dmViewer, type ClientMsg } from '@tabletop/core'
 import { useConnection, useRoute } from './net'
 import { Table } from './Table'
 import { useEffect, useRef } from 'react'
-import { useToasts } from './ui/Toasts'
+import { useToasts, type Toast } from './ui/Toasts'
+import { Empty, Field, Hint } from './ui/kit'
 import './styles.css'
 
 function App() {
@@ -79,9 +80,9 @@ function useArrivals(items: { id: string; name: string }[] | undefined,
 /* A clock advancing is news, and news belongs where the rest of the
    news goes rather than in a corner of its own. The first update after
    joining is the starting state, not a tick, so it is only recorded. */
-function useTicks(clocks: { id: string; name: string; ticks: number | null;
+function useTicks(clocks: { id: string; name: string; ticks: number | null; max: number
                             latestText: string | null }[] | undefined,
-                  announce: (text: string) => void) {
+                  announce: (text: string, clock?: Toast['clock']) => void) {
   const seen = useRef<Map<string, number> | null>(null)
   useEffect(() => {
     if (!clocks) return
@@ -90,8 +91,12 @@ function useTicks(clocks: { id: string; name: string; ticks: number | null;
     for (const k of clocks) {
       const before = seen.current.get(k.id)
       const after = k.ticks ?? -1
-      if (before !== undefined && after > before) {
-        announce(k.latestText ? `${k.name}: ${k.latestText}` : `${k.name} advances`)
+      if (after < 0) continue
+      // Newly shown, or advanced: both are news, and both carry the track.
+      const appeared = before === undefined || before < 0
+      if (appeared || after > before!) {
+        announce(k.latestText ?? (appeared ? 'You can see this one now.' : `${k.name} advances`),
+          { name: k.name, ticks: after, max: k.max })
       }
     }
     seen.current = now
@@ -109,14 +114,11 @@ function Join({ room }: { room: string }) {
         <img className="join-art" src={`/assets/${conn.campaign.lobby}`} alt="" draggable={false} />
       )}
       <h1>{conn.campaign?.title ?? 'Join the table'}</h1>
-      <label>
-        Room code
-        <input value={code} onChange={e => setCode(e.target.value)} />
-      </label>
+      <Field label="Room code" value={code} onChange={setCode} />
 
       {players.length > 0 ? (
         <>
-          <p className="hint">Who are you?</p>
+          <Hint>Who are you?</Hint>
           <div className="join-players">
             {players.map(p => (
               <a key={p.id} className="join-player"
@@ -127,11 +129,11 @@ function Join({ room }: { room: string }) {
           </div>
         </>
       ) : (
-        <p className="hint">
+        <Hint>
           {conn.status === 'open'
             ? 'This campaign declares no players.'
             : 'Looking for the table server.'}
-        </p>
+        </Hint>
       )}
 
       <a className="join-alt" href={`#table?room=${encodeURIComponent(code)}`}>

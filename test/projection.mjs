@@ -191,6 +191,23 @@ await wait(150)
   await wait(120)
 }
 
+// 4g-ii. Walking home is not a split. Sending somebody to where the
+// table already is used to leave a personal override pointing at the
+// same map: harmless to look at, but it stranded them there the next
+// time the table moved on.
+{
+  dm.ws.send(JSON.stringify({ t: 'cmd', cmd: { t: 'present', audience: 'table', scene: 'excavation' } }))
+  await wait(150)
+  const em = latest(emeric)
+  console.log('\nwalking home is not a split:')
+  console.log('  table moved to excavation | emeric followed to:', em.presented)
+  if (em.presented !== 'excavation') {
+    console.log('  FAIL: stranded on the old map by a stale override'); leaks++
+  }
+  dm.ws.send(JSON.stringify({ t: 'cmd', cmd: { t: 'present', audience: 'table', scene: 'ranch' } }))
+  await wait(120)
+}
+
 // 4h. Clocks: hidden ticks stay hidden; shown clocks update live.
 dm.ws.send(JSON.stringify({ t: 'cmd', cmd: { t: 'clockTicks', clock: 'clock.town', ticks: 2 } }))
 await wait(120)
@@ -286,6 +303,45 @@ if (tclock?.ticks !== 3) leaks++
     region.pins.some(p => p.id === 'thundertree'),
     '| still looking at:', w.presented, w.presented === wasAt ? '(nobody moved)' : '(FAIL)')
   if (!region.pins.some(p => p.id === 'thundertree') || w.presented !== wasAt) leaks++
+}
+
+// 4m. A clock's caption is read by the players; its note is not. The
+// two used to be one field, so revealing Cryovain put "show the track
+// once they have stopped explaining it away" — an instruction to the
+// DM — onto every screen at the table.
+{
+  dm.ws.send(JSON.stringify({ t: 'cmd', cmd: {
+    t: 'reveal', audience: 'table', targets: ['clock.cryovain#presence', 'clock.cryovain#track'] } }))
+  await wait(150)
+  const w = latest(table)
+  const cryo = w.clocks.find(c => c.id === 'clock.cryovain')
+  const wire = JSON.stringify(w)
+  console.log('\nclock caption and note:')
+  console.log('  caption reached them:', JSON.stringify(cryo?.caption))
+  const staged = wire.includes('stopped explaining it away')
+  console.log('  dm staging note reached them:', staged ? 'YES (leak)' : 'no (correct)')
+  if (!cryo || !cryo.caption) { console.log('  FAIL: caption did not reach them'); leaks++ }
+  if (staged) { console.log('  FAIL: dm staging note on the wire'); leaks++ }
+}
+
+// 4n. Reach is a reveal like any other: a ring nobody has been shown
+// is a ring that is not on the wire, because knowing an ogre reaches
+// ten feet is knowing something about the ogre.
+{
+  const pid = 'region.pc.emeric'
+  const before = latest(table).scenes.flatMap(s => s.tokens).find(t => t.id === pid)
+  dm.ws.send(JSON.stringify({ t: 'cmd', cmd: {
+    t: 'reveal', audience: 'table', targets: [pid + '#reach'] } }))
+  await wait(150)
+  const after = latest(table).scenes.flatMap(s => s.tokens).find(t => t.id === pid)
+  console.log('\nreach:')
+  console.log('  before revealing:', before ? before.reach : 'token absent',
+    '| after:', after ? after.reach : 'token absent')
+  if (!before || before.reach !== null) { console.log('  FAIL: reach on the wire unrevealed'); leaks++ }
+  if (!after || typeof after.reach !== 'number') { console.log('  FAIL: reach did not arrive'); leaks++ }
+  dm.ws.send(JSON.stringify({ t: 'cmd', cmd: {
+    t: 'conceal', audience: 'table', targets: [pid + '#reach'] } }))
+  await wait(120)
 }
 
 // 5. A player client trying to issue a command.

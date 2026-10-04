@@ -1,5 +1,5 @@
 import {
-  TABLE, PRESENCE, IDENTITY, HEALTH, DM_ONLY, DETAIL, target,
+  TABLE, PRESENCE, IDENTITY, HEALTH, DM_ONLY, DETAIL, REACH, target,
   findTokenKind, findActor,
   type CampaignIR, type Scene, type Actor, type AudienceId,
   type EntityId, type Viewport, type TokenShape, type Group,
@@ -41,6 +41,10 @@ export interface PublicToken {
   accent: string
   x: number
   y: number
+  /* How far it can hit, in feet, once that has been revealed to this
+     viewer. Null means either the creature has no declared reach or
+     this viewer has not been shown it. */
+  reach: number | null
   /** Null until identity is revealed: a figure on the map, not a name. */
   name: string | null
   art: string | null
@@ -60,6 +64,8 @@ export interface PublicNote {
 }
 
 export interface PublicItem {
+  /** What it does. Reaches whoever the item itself reaches. */
+  stats: StatBlock | null
   id: string
   name: string
   art: string | null
@@ -73,6 +79,7 @@ export interface PublicScene {
   id: string
   name: string
   background: string | null
+  art: string | null
   description: string | null
   entries: PublicEntry[]
   tokens: PublicToken[]
@@ -132,6 +139,10 @@ export interface QuestSecret {
   stageCount: number
   /** The whole graph, so a DM can see where a branch goes and jump back. */
   allStages: { id: string; playerText: string }[]
+  /* The route actually walked, oldest first, ending on the stage they
+     are standing on. The last milestone alone tells a DM where the
+     quest is but not what the table did to get there. */
+  path: { id: string; playerText: string }[]
 }
 
 export interface Secrets {
@@ -144,6 +155,8 @@ export interface Secrets {
   itemSecrets: Record<string, string>
   clockNow: Record<string, string>
   clockNext: Record<string, string>
+  /** The DM's standing note on a clock: staging, not description. */
+  clockNotes: Record<string, string>
 }
 
 export type World =
@@ -211,6 +224,7 @@ export function project(ir: CampaignIR, s: SessionState, v: Viewer): World {
     id: sc.id,
     name: sc.name,
     background: sc.background,
+    art: sc.art,
     description: sees(sc.id, 'description') ? sc.description : null,
     entries: sc.entries.filter(e => sees(e.id)).map(e => ({
       id: e.id, label: e.label, text: e.text, image: e.image, style: e.style,
@@ -241,6 +255,9 @@ export function project(ir: CampaignIR, s: SessionState, v: Viewer): World {
     return [{
       id: it.id, name: it.name, art: it.art, text: it.text,
       detail: sees(it.id, DETAIL) ? it.detail : null,
+      // Held together with the closer look: knowing what a thing does is
+      // the same act as examining it.
+      stats: sees(it.id, DETAIL) ? it.stats : null,
       group: it.group,
     }]
   })
@@ -320,6 +337,7 @@ function projectToken(
     accent: kind?.accent ?? '#8f9bb0',
     x: p.x,
     y: p.y,
+    reach: sees(pid, REACH) ? actor.reach ?? kind?.reach ?? null : null,
     name: identified ? p.label ?? actor.name : null,
     art: identified ? actor.art : null,
     hp: showHp ? { current: s.hp[pid] ?? actor.maxHp!, max: actor.maxHp! } : null,
@@ -349,7 +367,8 @@ function collectSecrets(ir: CampaignIR, s: SessionState): Secrets {
     const kind = findTokenKind(ir, actor.kind)
     tokens[pid] = {
       stats: actor.stats,
-      note: actor.note,
+      /* This one's contents if it has any, the kind's line otherwise. */
+      note: p.note ?? actor.note,
       narration: actor.narration,
       groups: kind?.groups ?? [PRESENCE, IDENTITY],
       actor: actor.id,
@@ -374,20 +393,26 @@ function collectSecrets(ir: CampaignIR, s: SessionState): Secrets {
       options: stage?.options ?? [],
       stageCount: q.stages.length,
       allStages: q.stages.map(x => ({ id: x.id, playerText: x.playerText })),
+      path: (s.questPath[q.id] ?? [stageId]).flatMap(id => {
+        const st = q.stages.find(x => x.id === id)
+        return st ? [{ id: st.id, playerText: st.playerText }] : []
+      }),
     }
   }
 
   const clockNow: Record<string, string> = {}
   const clockNext: Record<string, string> = {}
+  const clockNotes: Record<string, string> = {}
   for (const k of ir.clocks) {
     const ticks = s.clockTicks[k.id] ?? 0
     clockNow[k.id] = [...k.events].filter(e => e.at <= ticks).pop()?.dmText ?? ''
     clockNext[k.id] = k.events.find(e => e.at === ticks + 1)?.playerText ?? ''
+    if (k.note) clockNotes[k.id] = k.note
   }
 
   return {
     scenePrep, sceneCues, sceneChecks, sceneOptions,
-    tokens, quests, itemSecrets, clockNow, clockNext,
+    tokens, quests, itemSecrets, clockNow, clockNext, clockNotes,
   }
 }
 

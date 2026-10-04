@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { findTokenKind, type Actor } from '@tabletop/core'
 import type { ShellState } from '../shell'
-import { Section } from '../ui/Section'
+import { Section, Card, Action, Find, Hint, Empty, NoMatch } from '../ui/kit'
 
 /* ------------------------------------------------------------------
    The roster. Every actor the campaign declares, grouped as the
@@ -10,16 +10,18 @@ import { Section } from '../ui/Section'
    Arm-then-place rather than drag: it works on a trackpad, it works on
    touch, it survives a mis-drag, and the armed state is visible in the
    canvas the whole time so it is never ambiguous what a click will do.
+
+   A creature waiting to be placed is the same card as a creature
+   already standing somewhere, because it is the same creature. Armed
+   is the card's selected state, which is the same highlight selection
+   wears everywhere else.
 ------------------------------------------------------------------ */
 
 export function RosterPanel({ dm, arming, setArming, world, viewing }: ShellState) {
   const [q, setQ] = useState('')
-  if (!dm) return null
-
-  const scene = viewing ?? world.presented
-  const sceneName = world.scenes.find(s => s.id === scene)?.name ?? 'nowhere'
 
   const groups = useMemo(() => {
+    if (!dm) return []
     const needle = q.trim().toLowerCase()
     const match = (a: Actor) =>
       !needle
@@ -34,66 +36,56 @@ export function RosterPanel({ dm, arming, setArming, world, viewing }: ShellStat
       out.get(a.group)!.push(a)
     }
     return [...out.entries()]
-  }, [dm.ir.actors, q])
+  }, [dm, q])
+
+  if (!dm) return null
+
+  const scene = viewing ?? world.presented
+  const sceneName = world.scenes.find(s => s.id === scene)?.name ?? 'nowhere'
 
   const placedCount = (actorId: string) =>
     Object.values(dm.session.placements).filter(p => p.actor === actorId).length
 
   return (
     <div className="roster">
-      <div className="panel-sticky">
-        <input
-          className="search"
-          type="text"
-          value={q}
-          placeholder="Search the roster"
-          onChange={e => setQ(e.target.value)}
-        />
-      </div>
+      <Find what="a creature" value={q} onChange={setQ} />
 
       {arming ? (
         <div className="arm-note">
           <span>Click the map to place it on <strong>{sceneName}</strong>.</span>
-          <button className="ghost" onClick={() => setArming(null)}>cancel</button>
+          <Action onClick={() => setArming(null)}>cancel</Action>
         </div>
       ) : (
-        <p className="hint">Pick something, then click where it goes.</p>
+        <Hint>Pick something, then click where it goes.</Hint>
       )}
 
-      {groups.length === 0 && <p className="empty">Nothing matches.</p>}
+      {groups.length === 0 && <NoMatch what="creature" />}
 
       {groups.map(([group, actors]) => (
         <Section key={group} id={`roster:${group}`} label={group} count={actors.length}>
-          <div className="roster-grid">
-            {actors.map(a => {
-              const kind = findTokenKind(dm.ir, a.kind)
-              const n = placedCount(a.id)
-              return (
-                <button
-                  key={a.id}
-                  className={`roster-item ${arming === a.id ? 'is-armed' : ''}`}
-                  style={{ ['--tok' as string]: kind?.accent ?? '#8f9bb0' }}
-                  onClick={() => setArming(arming === a.id ? null : a.id)}
-                  title={kind?.label ?? a.kind}
-                >
-                  <span className={`roster-chip tok-${kind?.shape ?? 'disc'}`}>
-                    <span className="roster-fill">
-                      {a.art
-                        ? <img src={`/assets/${a.art}`} alt="" />
-                        : <em>{initials(a.name)}</em>}
-                    </span>
-                  </span>
-                  <span className="roster-name">{a.name}</span>
-                  {n > 0 && <span className="roster-count" title={`${n} on the table`}>{n}</span>}
-                </button>
-              )
-            })}
-          </div>
+          {actors.map(a => {
+            const kind = findTokenKind(dm.ir, a.kind)
+            const n = placedCount(a.id)
+            const armed = arming === a.id
+            return (
+              <Card key={a.id}
+                title={a.name}
+                tag={n > 0 ? `${n} on the table` : undefined}
+                tagTone="live"
+                meta={<>
+                  <strong>{kind?.label ?? a.kind}</strong>
+                  {' \u00b7 '}
+                  {armed ? <>waiting for a click on {sceneName}</> : <>ready to place</>}
+                </>}
+                body={a.entries?.look?.text || undefined}
+                active={armed}
+                onOpen={() => setArming(armed ? null : a.id)}
+                openTitle={armed ? 'Put it down again' : `Place ${a.name} on ${sceneName}`} />
+            )
+          })}
+          {actors.length === 0 && <Empty>Nothing in this group.</Empty>}
         </Section>
       ))}
     </div>
   )
 }
-
-const initials = (name: string) =>
-  name.replace(/^The\s+/i, '').split(' ').map(w => w[0]).join('').slice(0, 2)

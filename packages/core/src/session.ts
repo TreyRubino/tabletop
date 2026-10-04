@@ -35,6 +35,8 @@ export interface Placement {
   y: number
   /** Overrides the actor's name. For "Goblin 2" and similar. */
   label: string | null
+  /** What this one holds. Overrides the actor's note for the DM. */
+  note?: string | null
 }
 
 export interface SessionState {
@@ -49,6 +51,11 @@ export interface SessionState {
   linkPos: Record<string, { x: number; y: number }>
   /** Quest stage ids, not indices: stages form a graph. */
   questStage: Record<string, string>
+  /* The stages a quest has actually passed through, in order. A graph
+     that branches cannot be read backwards, so the route the table
+     took has to be recorded as it is walked or it is lost. Rebuilt
+     from the log on every boot, like everything else here. */
+  questPath: Record<string, string[]>
   clockTicks: Record<string, number>
   banner: Record<string, string | null>
   /** Private lines. A note is addressed, and its recipient decides whether
@@ -63,13 +70,19 @@ export function initialSession(ir: CampaignIR): SessionState {
   const hp: Record<string, number> = {}
   for (const scene of ir.scenes) {
     for (const p of scene.placements) {
-      placements[p.id] = { actor: p.actor, scene: scene.id, x: p.x, y: p.y, label: p.label }
+      placements[p.id] = {
+        actor: p.actor, scene: scene.id, x: p.x, y: p.y, label: p.label, note: p.note,
+      }
       const actor = findActor(ir, p.actor)
       if (actor?.maxHp != null) hp[p.id] = actor.maxHp
     }
   }
   const questStage: Record<string, string> = {}
-  for (const q of ir.quests) questStage[q.id] = q.start
+  const questPath: Record<string, string[]> = {}
+  for (const q of ir.quests) {
+    questStage[q.id] = q.start
+    questPath[q.id] = [q.start]
+  }
   const clockTicks: Record<string, number> = {}
   for (const k of ir.clocks) clockTicks[k.id] = 0
 
@@ -79,7 +92,7 @@ export function initialSession(ir: CampaignIR): SessionState {
     // at projection time, so a player's laptop follows unless split off.
     presented: { [TABLE]: { scene: ir.rootScene, viewport: FULL_VIEW } },
     reveals: { [TABLE]: [...ir.initialReveals] },
-    placements, hp, pinPos: {}, linkPos: {}, questStage, clockTicks,
+    placements, hp, pinPos: {}, linkPos: {}, questStage, questPath, clockTicks,
     banner: {},
     notes: [],
     nextId: 1,
@@ -238,11 +251,25 @@ export function apply(ir: CampaignIR, s: SessionState, c: Command): SessionState
       seen.add(target(c.placement as unknown as EntityId, IDENTITY))
       if (actor.maxHp != null) seen.add(target(c.placement as unknown as EntityId, HEALTH))
 
-      return {
-        ...moved,
-        reveals: { ...moved.reveals, [owner.id]: [...seen] },
-        presented: { ...moved.presented, [owner.id]: { scene: c.scene, viewport: FULL_VIEW } },
+      /* Sending somebody where the table already is puts them back with
+         the table rather than splitting them off to look at the same
+         map through their own window. A personal override that matches
+         the table's is not a split, it is a stranded flag: it would
+         leave the panel calling them "off on their own", leave rejoin
+         lit forever, and stop them following the next time the table
+         moves. So going home clears the override instead of setting
+         one. */
+      const presented = { ...moved.presented }
+      if (presented[TABLE]?.scene === c.scene) delete presented[owner.id]
+      else {
+        const was = s.presented[owner.id] ?? s.presented[TABLE]
+        presented[owner.id] = {
+          scene: c.scene,
+          viewport: was?.scene === c.scene ? was.viewport : FULL_VIEW,
+        }
       }
+
+      return { ...moved, reveals: { ...moved.reveals, [owner.id]: [...seen] }, presented }
     }
 
     case 'movePin': {
@@ -283,7 +310,18 @@ export function apply(ir: CampaignIR, s: SessionState, c: Command): SessionState
     case 'questStage': {
       const q = ir.quests.find(x => x.id === c.quest)
       if (!q || !q.stages.some(st => st.id === c.stage)) return s
-      return { ...s, questStage: { ...s.questStage, [q.id]: c.stage } }
+      /* Going somewhere new extends the route. Going back to a stage
+         already on it is a correction — the table did not walk those
+         steps a second time — so the route is cut back to that point
+         rather than recording the same stage twice. */
+      const was = s.questPath[q.id] ?? [s.questStage[q.id] ?? q.start]
+      const back = was.indexOf(c.stage)
+      const path = back === -1 ? [...was, c.stage] : was.slice(0, back + 1)
+      return {
+        ...s,
+        questStage: { ...s.questStage, [q.id]: c.stage },
+        questPath: { ...s.questPath, [q.id]: path },
+      }
     }
 
     case 'clockTicks': {
@@ -330,7 +368,18 @@ export function apply(ir: CampaignIR, s: SessionState, c: Command): SessionState
          and leaving it in place would strand their screen on wherever
          they used to be while everybody else moves. So the override is
          dropped for every audience whose character was carried along. */
-      const presented = { ...s.presented, [TABLE]: { scene: c.scene, viewport: FULL_VIEW } }
+      /* Moving the party onto the map the table is already looking at is
+         not a change of view. Stamping FULL_VIEW there pulled the zoom
+         out from under everyone for no reason. Only a genuinely new
+         scene resets the window, because a viewport is scene-relative. */
+      const at = s.presented[TABLE]
+      const presented = {
+        ...s.presented,
+        [TABLE]: {
+          scene: c.scene,
+          viewport: at?.scene === c.scene ? at.viewport : FULL_VIEW,
+        },
+      }
       const carried = new Set(members.map(([, p]) => p.actor as string))
       for (const a of ir.audiences) {
         if (a.actor && carried.has(a.actor)) delete presented[a.id]

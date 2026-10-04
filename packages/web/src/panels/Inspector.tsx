@@ -5,6 +5,7 @@ import {
 } from '@tabletop/core'
 import type { StatBlock } from '@tabletop/core'
 import { activeScene, isDM } from '../shell'
+import { Action, Hint, Empty } from '../ui/kit'
 import type { ShellState } from '../shell'
 
 /* ------------------------------------------------------------------
@@ -15,64 +16,190 @@ import type { ShellState } from '../shell'
 ------------------------------------------------------------------ */
 
 export function Inspector(shell: ShellState) {
-  const { world, viewing, selected } = shell
+  const { world, viewing, readToken, selectedItem, selectedQuest, selectedClock } = shell
   const scene = activeScene(world, viewing)
-  const token = scene?.tokens.find(t => t.id === selected) ?? null
+  const token = scene?.tokens.find(t => t.id === readToken) ?? null
+  const item = world.items.find(i => i.id === selectedItem) ?? null
+  const quest = world.quests.find(q => q.id === selectedQuest) ?? null
+  const clock = world.clocks.find(k => k.id === selectedClock) ?? null
+
+  /* Five things can be the subject and only one ever is, so pick it
+     first and render it once. A chain of nested ternaries five deep
+     was becoming a puzzle rather than a switch. */
+  if (item) return <ItemCard shell={shell} item={item} />
+  if (clock) return <ClockCard shell={shell} clock={clock} />
+  if (quest) return <QuestCard shell={shell} quest={quest} />
+  if (token) return <TokenCard shell={shell} token={token} />
+  if (scene) return <SceneCard shell={shell} sceneId={scene.id} />
 
   return (
-    <>
-      <PartyStrip shell={shell} />
-      {token
-        ? <TokenCard shell={shell} token={token} />
-        : scene
-          ? <SceneCard shell={shell} sceneId={scene.id} />
-          : <p className="empty">Nothing on screen.</p>}
-    </>
+    <div className="insp">
+      <header className="insp-head">
+        <div>
+          <h2>Nothing on screen</h2>
+          <p className="insp-kind">pick a place to begin</p>
+        </div>
+      </header>
+      <Empty>Choose somewhere in Places and it will open here.</Empty>
+    </div>
   )
 }
 
 /* ------------------------------------------------------------------
-   The party, always in view: portrait, health, and where each of them
-   is standing right now. Clicking one jumps to them. Portraits come
-   from the actor's art; without one, initials on the kind's colour.
-   Wherever the party splits, the strip is how the DM keeps all of
-   them in their head at once.
+   An item, read the way a creature is read: picture first, then what
+   it is, then what it does, and the DM's line about it last. Same
+   card shape as a token so the sidebar has one voice.
 ------------------------------------------------------------------ */
-function PartyStrip({ shell }: { shell: ShellState }) {
-  const { world, viewing, selected, setViewing, setSelected } = shell
-  const members = world.scenes.flatMap(s =>
-    s.tokens.filter(t => t.party).map(t => ({ t, scene: s })))
-  if (members.length === 0) return null
+function ItemCard({
+  shell, item,
+}: {
+  shell: ShellState
+  item: {
+    id: string; name: string; group: string; art: string | null
+    text: string | null; detail: string | null; stats: StatBlock | null
+  }
+}) {
+  const { world, dm } = shell
+  const secret = isDM(world) ? world.secrets.itemSecrets[item.id] : null
+  const held = dm
+    ? dm.ir.audiences.filter(a =>
+        (dm.session.reveals[a.id] ?? []).includes(target(item.id as EntityId)))
+    : []
 
   return (
-    <div className="party is-sticky" role="list" aria-label="The party">
-      {members.map(({ t, scene }) => {
-        const initials = (t.name ?? '?')
-          .replace(/^The\s+/i, '').split(' ').map(w => w[0]).join('').slice(0, 2)
-        const here = viewing === scene.id || (!viewing && world.presented === scene.id)
-        return (
-          <button key={t.id} role="listitem"
-            className={`party-card ${selected === t.id ? 'is-selected' : ''}`}
-            style={{ ['--tok' as string]: t.accent }}
-            title={`${t.name ?? 'Someone'} — ${scene.name}`}
-            onClick={() => { setViewing(scene.id); setSelected(t.id) }}>
-            <span className="party-face">
-              {t.art
-                ? <img src={`/assets/${t.art}`} alt="" />
-                : <em>{initials}</em>}
-            </span>
-            <span className="party-meta">
-              <span className="party-name">{t.name ?? 'Someone'}</span>
-              <span className={`party-where ${here ? '' : 'is-away'}`}>{scene.name}</span>
-            </span>
-            {t.hp && (
-              <span className="party-hp" aria-hidden>
-                <span style={{ width: `${(t.hp.current / t.hp.max) * 100}%` }} />
-              </span>
-            )}
-          </button>
-        )
-      })}
+    <div className="insp">
+      <header className="insp-head">
+        <div>
+          <h2>{item.name}</h2>
+          <p className="insp-kind">{item.group}</p>
+        </div>
+      </header>
+
+      {item.art && (
+        <figure className="insp-portrait">
+          <img src={`/assets/${item.art}`} alt={item.name}
+            onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
+        </figure>
+      )}
+
+      {item.text && <p className="prose">{item.text}</p>}
+      {item.detail && <p className="prose item-detail">{item.detail}</p>}
+
+      {secret && <p className="truth">{secret}</p>}
+
+      {dm && (
+        <Hint>
+          {held.length === 0
+            ? 'Nobody has this yet.'
+            : `Held by ${held.map(a => a.name).join(', ')}.`}
+        </Hint>
+      )}
+
+      {item.stats && <StatBlockCard stats={item.stats} />}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------
+   A quest, read rather than driven. Its controls — showing it to the
+   table, taking a branch, jumping to a stage — stay on the card in the
+   Quests panel. What lands here is what the players have been told and,
+   underneath it, what is actually going on.
+------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------
+   A clock, read rather than wound. Its controls — showing it, stepping
+   it — stay on the card in the Clocks panel. What lands here is where
+   it stands, the newest thing the players have been told, and beneath
+   that what is actually happening and what happens next.
+------------------------------------------------------------------ */
+
+function ClockCard({
+  shell, clock,
+}: {
+  shell: ShellState
+  clock: { id: string; name: string; caption: string; ticks: number | null; max: number
+    latestText: string | null }
+}) {
+  const { world } = shell
+  const sec = isDM(world) ? world.secrets : null
+  const now = sec?.clockNow[clock.id]
+  const next = sec?.clockNext[clock.id]
+  const note = sec?.clockNotes[clock.id]
+
+  return (
+    <div className="insp">
+      <header className="insp-head">
+        <div>
+          <h2>{clock.name}</h2>
+          <p className="insp-kind">Clock</p>
+        </div>
+      </header>
+
+      <Hint>{clock.ticks === null
+        ? 'You know this exists, not where it stands.'
+        : `${clock.ticks} of ${clock.max} filled.`}</Hint>
+
+      {clock.caption && <p className="prose">{clock.caption}</p>}
+      {clock.latestText && <blockquote className="read"><p>{clock.latestText}</p></blockquote>}
+
+      {now && <p className="truth">{now}</p>}
+      {note && <p className="truth">{note}</p>}
+
+      {next && (
+        <section className="cues">
+          <h3>Next step</h3>
+          <p className="prose">{next}</p>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function QuestCard({
+  shell, quest,
+}: {
+  shell: ShellState
+  quest: { id: string; title: string; stageText: string | null; stageId: string }
+}) {
+  const { world } = shell
+  const sec = isDM(world) ? world.secrets.quests[quest.id] : null
+  const step = sec ? sec.allStages.findIndex(s => s.id === quest.stageId) + 1 : 0
+
+  /* Everything behind them. The stage they are standing on is already
+     the prose above, so it is dropped here rather than printed twice —
+     the same duplication that made the reveals page unreadable. */
+  const behind = (sec?.path ?? []).filter(st => st.id !== quest.stageId)
+
+  return (
+    <div className="insp">
+      <header className="insp-head">
+        <div>
+          <h2>{quest.title}</h2>
+          <p className="insp-kind">Quest</p>
+        </div>
+      </header>
+
+      {sec && <Hint>Step {step || 1} of {sec.stageCount}.</Hint>}
+
+      {quest.stageText && <p className="prose">{quest.stageText}</p>}
+      {sec?.dmText && <p className="truth">{sec.dmText}</p>}
+
+      {!quest.stageText && !sec?.dmText && (
+        <Empty>Nothing written for this step yet.</Empty>
+      )}
+
+      {behind.length > 0 && (
+        <section className="cues">
+          <h3>How they got here</h3>
+          {behind.map((st, i) => (
+            <div key={`${st.id}-${i}`} className="cue">
+              <span className="cue-when">Step {i + 1}</span>
+              <p>{st.playerText}</p>
+            </div>
+          ))}
+        </section>
+      )}
     </div>
   )
 }
@@ -82,16 +209,26 @@ function SceneCard({ shell, sceneId }: { shell: ShellState; sceneId: string }) {
   const scene = world.scenes.find(s => s.id === sceneId)!
   const prep = isDM(world) ? world.secrets.scenePrep[sceneId] : null
   const cues = isDM(world) ? world.secrets.sceneCues[sceneId] ?? [] : []
-  const checks = isDM(world) ? world.secrets.sceneChecks[sceneId] ?? [] : []
   const options = isDM(world) ? world.secrets.sceneOptions[sceneId] ?? [] : []
-  const players = dm ? dm.ir.audiences.filter(a => a.personal) : []
 
   const readAloud = scene.entries.filter(e => e.style === 'read')
   const rest = scene.entries.filter(e => e.style !== 'read')
 
   return (
     <div className="insp">
-      <h2>{scene.name}</h2>
+      <header className="insp-head">
+        <div>
+          <h2>{scene.name}</h2>
+          <p className="insp-kind">Place</p>
+        </div>
+      </header>
+
+      {scene.art && (
+        <figure className="insp-portrait">
+          <img src={`/assets/${scene.art}`} alt={scene.name}
+            onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
+        </figure>
+      )}
 
       {readAloud.map(e => (
         <blockquote key={e.id} className="read">
@@ -107,65 +244,10 @@ function SceneCard({ shell, sceneId }: { shell: ShellState; sceneId: string }) {
       )}
 
       {scene.entries.length === 0 && !scene.description && (
-        <p className="empty">
+        <Empty>
           {dm ? 'No entries here yet. Add them under this scene in the campaign file.'
               : 'You have not learned anything here yet.'}
-        </p>
-      )}
-
-      {options.length > 0 && (
-        <section className="affordances">
-          <h3>They can</h3>
-          <ul>{options.map((o, i) => <li key={i}>{o}</li>)}</ul>
-        </section>
-      )}
-
-      {checks.length > 0 && dm && (
-        <section className="checks">
-          <h3>Checks</h3>
-          {checks.map(k => (
-            <article key={k.id} className="check">
-              <header>
-                <span className="check-skill">
-                  {k.skill}{k.dc !== null && (
-                    <em>{dm?.ir.difficultyLabel ? ` ${dm.ir.difficultyLabel} ` : ' '}{k.dc}</em>
-                  )}
-                </span>
-                {k.when && <span className="check-when">{k.when}</span>}
-              </header>
-              {k.success && <p className="check-out is-pass">{k.success}</p>}
-              {k.failure && <p className="check-out is-fail">{k.failure}</p>}
-              {k.reveals.length > 0 && (
-                <div className="check-grant">
-                  <span>on a pass, tell</span>
-                  <button className="chip" onClick={() => {
-                    dm.send({ t: 'reveal', audience: TABLE, targets: k.reveals })
-                    dm.toast(`${k.skill} passed — shown to everyone`)
-                  }}>everyone</button>
-                  {players.map(pl => (
-                    <button key={pl.id} className="chip" onClick={() => {
-                      dm.send({ t: 'reveal', audience: pl.id as AudienceId, targets: k.reveals })
-                      if (k.success) dm.send({ t: 'note', audience: pl.id as AudienceId, text: k.success })
-                      dm.toast(`${k.skill} passed — told to ${pl.name} alone`)
-                    }}>{pl.name}</button>
-                  ))}
-                </div>
-              )}
-            </article>
-          ))}
-        </section>
-      )}
-
-      {cues.length > 0 && (
-        <section className="cues">
-          <h3>Cues</h3>
-          {cues.map(q => (
-            <div key={q.id} className="cue">
-              {q.when && <span className="cue-when">{q.when}</span>}
-              <p>{q.text}</p>
-            </div>
-          ))}
-        </section>
+        </Empty>
       )}
 
       {prep && (
@@ -183,22 +265,35 @@ function SceneCard({ shell, sceneId }: { shell: ShellState; sceneId: string }) {
           {prep.notes && <p className="truth">{prep.notes}</p>}
         </>
       )}
+
+      {options.length > 0 && (
+        <section className="affordances">
+          <h3>They can</h3>
+          <ul>{options.map((o, i) => <li key={i}>{o}</li>)}</ul>
+        </section>
+      )}
+
+      {cues.length > 0 && (
+        <section className="cues">
+          <h3>Cues</h3>
+          {cues.map(q => (
+            <div key={q.id} className="cue">
+              {q.when && <span className="cue-when">{q.when}</span>}
+              <p>{q.text}</p>
+            </div>
+          ))}
+        </section>
+      )}
+
     </div>
   )
 }
 
 function TokenCard({ shell, token }: { shell: ShellState; token: PublicToken }) {
-  const { world, dm, setSelected } = shell
+  const { world, dm } = shell
   const secret = isDM(world) ? world.secrets.tokens[token.id] : null
   const kind = dm ? findTokenKind(dm.ir, token.kind) : null
   const [narrationAt, setNarrationAt] = useState(0)
-
-  const placement = dm?.session.placements[token.id]
-  const revealed = (group: string) =>
-    !dm || (dm.session.reveals[TABLE] ?? []).includes(target(token.id as EntityId, group))
-  const toggle = (group: string) => dm?.send(revealed(group)
-    ? { t: 'conceal', audience: TABLE, targets: [target(token.id as EntityId, group)] }
-    : { t: 'reveal', audience: TABLE, targets: [target(token.id as EntityId, group)] })
 
   const name = token.name ?? secret?.actorName ?? 'Someone'
   const lines = secret?.narration ?? []
@@ -210,50 +305,31 @@ function TokenCard({ shell, token }: { shell: ShellState; token: PublicToken }) 
           <h2>{name}</h2>
           <p className="insp-kind">{kind?.label ?? token.kind}</p>
         </div>
-        {dm && placement && (
-          <div className="row">
-            <button className="ghost" title="Duplicate this token"
-              onClick={() => {
-                dm.send({
-                  t: 'place', actor: placement.actor as never, scene: placement.scene as never,
-                  x: Math.min(0.96, placement.x + 0.04), y: Math.min(0.96, placement.y + 0.04),
-                })
-                dm.toast(`Another ${secret?.actorName ?? 'token'} placed`)
-              }}>duplicate</button>
-            <button className="ghost danger" title="Take this token off the table"
-              onClick={() => {
-                dm.send({ t: 'unplace', placement: token.id as never })
-                setSelected(null)
-                dm.toast('Token removed. Undo puts it back.')
-              }}>remove</button>
-          </div>
-        )}
       </header>
 
       {token.art && (
-        <figure className="insp-portrait" style={{ ['--tok' as string]: token.accent }}>
+        <figure className={`insp-portrait ${token.party ? 'is-pc' : ''}`}
+          style={{ ['--tok' as string]: token.accent }}>
           <img src={`/assets/${token.art}`} alt={name}
             onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
         </figure>
       )}
 
-      {dm && secret && (
-        <>
-          <div className="insp-groups">
-            {secret.groups.map(g => (
-              <button key={g} className={`chip ${revealed(g) ? 'is-on' : ''}`}
-                onClick={() => toggle(g)} title={`Show ${g} to everyone`}>
-                {chipLabel(g)}
-              </button>
-            ))}
-            {kind?.hasSecrets && (
-              <span className="chip is-locked" title="This content has no public representation">
-                dm only
-              </span>
-            )}
-          </div>
+      {lines.length > 0 && (
+        <section className="narration">
+          <h3>Read when it acts</h3>
+          <p className="prose">{lines[narrationAt % lines.length]}</p>
+          {lines.length > 1 && (
+            <Action onClick={() => setNarrationAt(n => n + 1)}>
+              another ({(narrationAt % lines.length) + 1} of {lines.length})
+            </Action>
+          )}
+        </section>
+      )}
 
-        </>
+      {dm && kind?.hasSecrets && (
+        <Hint>Some of this creature has no public representation — it is
+        yours to read out, not to reveal.</Hint>
       )}
 
       {token.hp && (
@@ -263,31 +339,17 @@ function TokenCard({ shell, token }: { shell: ShellState; token: PublicToken }) 
           </div>
           {dm ? (
             <div className="hp-controls">
-              <button onClick={() => dm.send({ t: 'setHp', placement: token.id as never, value: token.hp!.current - 5 })}>&minus;5</button>
-              <button onClick={() => dm.send({ t: 'setHp', placement: token.id as never, value: token.hp!.current - 1 })}>&minus;1</button>
+              <Action onClick={() => dm.send({ t: 'setHp', placement: token.id as never, value: token.hp!.current - 5 })}>&minus;5</Action>
+              <Action onClick={() => dm.send({ t: 'setHp', placement: token.id as never, value: token.hp!.current - 1 })}>&minus;1</Action>
               <span>{token.hp.current} / {token.hp.max}</span>
-              <button onClick={() => dm.send({ t: 'setHp', placement: token.id as never, value: token.hp!.current + 1 })}>+1</button>
-              <button onClick={() => dm.send({ t: 'setHp', placement: token.id as never, value: token.hp!.current + 5 })}>+5</button>
+              <Action onClick={() => dm.send({ t: 'setHp', placement: token.id as never, value: token.hp!.current + 1 })}>+1</Action>
+              <Action onClick={() => dm.send({ t: 'setHp', placement: token.id as never, value: token.hp!.current + 5 })}>+5</Action>
             </div>
           ) : (
             <span className="hp-count">{token.hp.current} / {token.hp.max}</span>
           )}
         </div>
       )}
-
-      {lines.length > 0 && (
-        <section className="narration">
-          <h3>Read when it acts</h3>
-          <p className="prose">{lines[narrationAt % lines.length]}</p>
-          {lines.length > 1 && (
-            <button className="ghost" onClick={() => setNarrationAt(n => n + 1)}>
-              another ({(narrationAt % lines.length) + 1} of {lines.length})
-            </button>
-          )}
-        </section>
-      )}
-
-      {secret?.stats && <StatBlockCard stats={secret.stats} />}
 
       {token.entries.length > 0 && (
         <div className="entries">
@@ -296,9 +358,9 @@ function TokenCard({ shell, token }: { shell: ShellState; token: PublicToken }) 
       )}
 
       {token.entries.length === 0 && (
-        <p className="empty">
+        <Empty>
           {dm ? 'Nothing revealed to the table yet.' : 'You do not know anything about this yet.'}
-        </p>
+        </Empty>
       )}
 
       {secret && secret.entries.length > 0 && (
@@ -307,6 +369,16 @@ function TokenCard({ shell, token }: { shell: ShellState; token: PublicToken }) 
         </div>
       )}
       {secret?.note && <p className="truth">{secret.note}</p>}
+
+      {/* The stat block is last on every card. What it looks like, how
+          to play it and what a player might already know are what you
+          need on opening; the numbers are what you need once the dice
+          are out. */}
+      {secret?.stats && <StatBlockCard stats={secret.stats} />}
+
+      {/* Numbers last. What it looks like, what it wants and how to play
+          it decide the scene; the stat block is a table you consult once
+          somebody swings. */}
     </div>
   )
 }
