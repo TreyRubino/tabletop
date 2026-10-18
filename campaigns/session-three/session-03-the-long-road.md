@@ -764,6 +764,8 @@ It has not seen you yet.
 
 > - [ ] Grol does not come out. He is in the tower, and he will be found sitting down, and he will have heard the whole fight through the floor.
 
+> - [ ] This is the yard where Levi spends the spring. If he takes the hobgoblin with the hard use, the arm goes dead and he kneels in the open with his greatsword on the ground and winds it with goblins still standing, and that is worth slowing the fight down for — it is the first time the table watches the cost get paid rather than reads about it.
+
 ### What is on them
 
 The hobgoblin is the one worth standing over.

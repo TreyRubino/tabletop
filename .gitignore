@@ -3,3 +3,4 @@ dist
 *.tsbuildinfo
 data
 .DS_Store
+data_bak
