@@ -18,7 +18,7 @@ import { Room, type Client } from './room.js'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
 const PORT = Number(process.env.PORT ?? 8080)
-const CAMPAIGN = resolve(ROOT, process.env.CAMPAIGN ?? 'campaigns/session-two')
+const CAMPAIGN = resolve(ROOT, process.env.CAMPAIGN ?? 'campaigns/session-three')
 const ROOM_CODE = (process.env.ROOM ?? 'table').toLowerCase()
 const DM_KEY = process.env.DM_KEY ?? randomBytes(4).toString('hex')
 

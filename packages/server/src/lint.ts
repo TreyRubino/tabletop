@@ -8,7 +8,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 // the default is resolved from the repo root.
 const dir = process.argv[2]
   ? resolve(process.cwd(), process.argv[2])
-  : resolve(ROOT, process.env.CAMPAIGN ?? 'campaigns/session-two')
+  : resolve(ROOT, process.env.CAMPAIGN ?? 'campaigns/session-three')
 const r = loadCampaign(dir)
 
 if (!r.ok) {
