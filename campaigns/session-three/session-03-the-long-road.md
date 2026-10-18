@@ -29,6 +29,8 @@ It is colder than it was on the way out. Not a little. The puddles in the ruts a
 
 Somewhere in the second hour Kaelen says the thing that has been bothering her since the treeline.
 
+> - [ ] **Image:** the emptied wood
+
 **KAELEN:** "There's nothing out here."
 
 And once she has said it you all notice it at the same time. No birds. No squirrel-chatter, no crows arguing in the tops, no rustle in the deadfall. A pine wood in winter is a quiet place and it is not a silent one, and this is silent, and it has been silent for a mile.
@@ -82,6 +84,8 @@ It is not frosted and it is not rimed. It is clear. You can see into it for two 
 
 The hearth. The pale rectangles on the boards. The four hooks by the door.
 
+> - [ ] **Image:** the doorpost under the ice
+
 And low on the doorpost, under perhaps two inches of absolutely clear ice, the column of knife-scratches. A child's height, marked off year on year, the whole run of them, with the notch at the top where somebody cut the last one out of the wood and took the piece away with them.
 
 > - [ ] This is where the party spent the first night of the ride east — a day out of Phandalin, abandoned long before this winter, and they slept on its floor because it had a roof. Session two never played that night out, so whatever they remember of the inside of it is theirs. The recognition does the work and nothing needs explaining over it.
@@ -93,6 +97,8 @@ It is a first-year exercise. You did it in a bowl in a cold room with a ring cha
 You have never seen clear ice outside a laboratory. You have certainly never seen a house full of it.
 
 Whatever came through here did in under a minute what the conclave needed a chalked ring and four hours to do to a bowl of water, and it did it to a building, in passing, on its way somewhere else.
+
+> - [ ] **Image:** the cloud off the mountain
 
 | When | Check | DC | What they get |
 |---|---|---|---|
@@ -181,6 +187,8 @@ A thing that walks slow at the back of a column kills the column. So." *He turns
 #### ↳ If they ask what happened north
 
 **THE ORC:** "Cold.
+
+> - [ ] **Image:** the stream that stopped
 
 Not winter. We know winter, we live in it, we are very good at it. This came in the second week of the month and it came at night and the first thing we knew of it was that the stream had stopped — not frozen over, *stopped*, standing up in the air in a shape like water, and the fish in it still in the shape of swimming.
 
@@ -307,6 +315,8 @@ They are not hunting you. They are between you and the only track south and they
 
 A day of hard travelling south-west on an old orc's quarry tracks, and then the hills open and the palisade of Phandalin is sitting in its valley with smoke standing straight up out of forty chimneys, and the smell of the place reaches you before the gate does — woodsmoke and wet wool and the tannery, and after four days of it being somewhere else, it smells like the best thing that has ever happened.
 
+> - [ ] **Image:** barthen's provisions
+
 Barthen's Provisions is the long low building on the south side of the square with the door propped despite the weather, and Elmar Barthen is behind the counter writing in a ledger, and he keeps writing for exactly as long as it takes him to finish the sentence before he looks up.
 
 Then he sees the four of you, and then he sees Levi's sleeve, and he puts the pen down.
@@ -422,6 +432,8 @@ The screws come out easily — they are brass too, and cut so fine they turn und
 >
 > *— GNERKLI, King of Gnomengarde (for the time being)*
 
+> - [ ] **Image:** the arm
+
 Under the wool there is the gauntlet. Under the gauntlet, in a flat compartment at the bottom of the crate, a sheaf of witnessed paper tied with tape, and under the paper a circle of worked gold three pounds in weight with a felt hat folded inside it.
 
 The gauntlet is brass, and it has not been polished — it has been *finished*, which is different, and the surface of it has the soft dull warmth of something made to be handled for forty years.
@@ -459,6 +471,8 @@ And set flush into the outside of the cuff just below the elbow, with a folding 
 
 ## What the arm does
 
+> - [ ] **Image:** the long reach
+
 **THE LONG REACH.** A quarter turn and the hand comes off the wrist. It pays out on the chain to thirty feet and he moves it as though it were still on the end of his arm, because as far as he is concerned it is.
 
 **The small work — at will, no action, once on his turn.** The hand does one plain physical thing within thirty feet: fetch, hold, open, carry, lift something off a floor he cannot reach, hold a door shut, keep a grip on a rope. This costs the spring nothing and he can do it all day.
@@ -469,6 +483,8 @@ And set flush into the outside of the cuff just below the elbow, with a folding 
 - **Anchor and haul.** Stone or timber he can see within thirty feet. The hand sets, the chain goes taut, and he is pulled to within five feet of it. Forced movement, so it provokes nothing. Anchoring above himself leaves him hanging on the chain rather than falling, because the ratchet holds, and climbing the rest of it is ordinary Athletics.
 
 **The chain.** AC 17, 10 hit points, severed at 0. It only takes damage from an attack aimed at it, and a creature held by the hand can reach the chain whatever the distance, because it is attached to it. The chain retracts by hand — he reels it in — so a spent spring never strands the hand out of reach. A severed chain means the hand is a loose brass object to be picked up and carried to somebody who can re-link it.
+
+> - [ ] **Image:** winding it in the open
 
 **The cost of the hard use.** The spring is spent, and until it is wound there is no second hard use and no small work either. Winding is eight turns of the key: he braces the cuff between his knees and turns the key with his right hand, which takes his **action on two consecutive turns** — about twelve seconds, in the open, in front of whatever he just did that to. He is holding nothing while he does it. If he takes damage mid-wind, DC 10 Constitution save, and on a failure the count starts again. He can wind it with the hand still out on the chain or still gripping something; what he cannot do is wind it and fight in the same breath.
 
@@ -512,6 +528,8 @@ And somewhere around the third song you will notice Levi has gone very quiet in 
 Three people find you over the course of the evening.
 
 ### Dazlyn Grayshard
+
+> - [ ] **Image:** dazlyn and the rubbings
 
 She has a table in the corner with the hides weighted flat with tankards and she has not eaten anything. She is filthy to the elbow and completely happy, and when she sees you she starts talking before you have sat down.
 
@@ -568,6 +586,8 @@ The rest goes on the table and stays there: the **grey river pearls**, the **old
 ---
 
 ### Linene Graywind
+
+> - [ ] **Image:** linene graywind
 
 She runs the Lionshield Coster and she prices everything twice, once out loud, and she comes over with two drinks nobody ordered and sits down without being invited.
 
@@ -629,6 +649,8 @@ The cave mouth is about eight feet across with the stream running out of the mid
 
 There is somebody on the bridge. He is sitting down with his legs through the planks, he has a horn on a cord round his neck, and he is asleep.
 
+> - [ ] **Image:** the dam goes
+
 | When | Check | DC | What they get |
 |---|---|---|---|
 | Looking the place over from cover | Perception | any | A cave mouth, a stream, a plank bridge above it, and the brush on the left bank cut and put back rather than grown |
@@ -646,7 +668,11 @@ There is somebody on the bridge. He is sitting down with his legs through the pl
 
 The cave is three chambers on two levels with the stream running through the lower one, and a goblin band that has got rich and soft and has not had to defend anything since midsummer.
 
+> - [ ] **Image:** the bugbear from behind
+
 > - [ ] Six bodies: five goblins, two of them the lookouts in the thorns and a third asleep on the plank bridge, and a bugbear who opens from stealth behind the party rather than in front of them. The goblins will not hold a line — drop the bugbear and the rest go out of the back.
+
+> - [ ] **Image:** the flooded chamber
 
 > - [ ] If the dam went first, the lower chamber is waist deep and the bugbear is furious and soaking and fighting in water, and the two goblins who sleep down there are simply gone downstream. That is the party being clever and it should feel like it.
 
@@ -661,6 +687,8 @@ And round the neck of each of them, on a cord, there is a flat lead disc the siz
 They were being paid in the same coin they were handing out.
 
 ---
+
+> - [ ] **Image:** the customs house
 
 The upper chamber is the customs house, and that is the thing worth seeing.
 
@@ -697,6 +725,8 @@ There is smoke coming out of one of the towers.
 
 It is not the tower the causeway goes to.
 
+> - [ ] **Image:** the killing box
+
 | When | Check | DC | What they get |
 |---|---|---|---|
 | Looking at the castle from the treeline | Perception | any | Seven towers, one of them lived in, a causeway in from the west, and both gates long gone |
@@ -713,6 +743,20 @@ It is not the tower the causeway goes to.
 > - [ ] Open floor at the treeline. The front is a trap and the north wall is open, and the party have everything they need to know that without a single roll if anybody simply says the smoke is wrong.
 
 ### Who is in here
+
+> - [ ] **Image:** the drill in the yard
+
+Whichever way you come in, the inner yard is the first thing you see properly, and there is something happening in it.
+
+A hobgoblin has two goblins out on the frozen mud in front of the standing well, and it is drilling them. Not playing at it. There is a line scratched in the ice that they are supposed to hold, and a count being given, and a length of cart strap in its hand for when the count is not kept.
+
+The goblins are extremely bad at it. They have been extremely bad at it for a while, and the hobgoblin has not stopped, and that is the part worth looking at — somebody, somewhere, has told this creature that the Cragmaws will learn to hold a line, and it has believed them, and it is out here in the cold at the end of the year still trying.
+
+It has not seen you yet.
+
+> - [ ] This is the yard before the fight and it is also the clearest look anybody gets at the thing that is wrong with this place. Goblins do not drill. The party have as long as they want to watch it, and the first move is theirs.
+
+> - [ ] **Image:** the yard fight
 
 > - [ ] Eight bodies across the whole ruin, and they do not fight as one group unless the alarm goes up: two goblins on the gatehouse positions, two more at the south-east tower door, a bugbear sleeping off the afternoon in the undercroft, and a hobgoblin in the yard drilling two goblins who are extremely bad at it.
 
@@ -739,6 +783,8 @@ And the bugbear in the undercroft, when somebody gets round to rolling him over,
 ### Grol
 
 The lived-in tower is three floors of which two are a floor, and the top one has been made into something.
+
+> - [ ] **Image:** grol's throne room
 
 There is a chair in it. Somebody has carried a high-backed wooden chair up two flights of broken stair and set it at the far end of the room with a bearskin over it, and there is a stand beside it with a cup on it, and a brazier, and a rug that came off a cart.
 
@@ -800,6 +846,8 @@ He is trying to hand you a problem. He has been sitting in that chair for four d
 ### The desk
 
 Against the wall there is a trestle table with a lamp, an inkhorn, a dozen cut quills, and a stack of paper weighted with a stone.
+
+> - [ ] **Image:** the hand on the paper
 
 A bugbear does not own paper.
 
